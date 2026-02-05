@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taschenrechner Widget - Bookmarklet</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      margin: 0;
+      padding: 40px 20px;
+      color: #fff;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .subtitle {
+      text-align: center;
+      opacity: 0.9;
+      margin-bottom: 40px;
+      font-size: 1.1rem;
+    }
+    .card {
+      background: rgba(255,255,255,0.95);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+      color: #333;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .card h2 {
+      margin-top: 0;
+      color: #667eea;
+      font-size: 1.4rem;
+    }
+    .bookmarklet-link {
+      display: inline-block;
+      background: linear-gradient(145deg, #667eea, #764ba2);
+      color: #fff;
+      padding: 15px 30px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.1rem;
+      cursor: move;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .bookmarklet-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+    .bookmarklet-container {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .instructions {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .instructions ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .instructions li {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    .demo-btn {
+      background: linear-gradient(145deg, #28a745, #20c997);
+      color: #fff;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 50px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+      transition: transform 0.2s;
+    }
+    .demo-btn:hover {
+      transform: translateY(-2px);
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .feature {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    .feature h3 {
+      margin: 0 0 10px 0;
+      font-size: 1rem;
+      color: #667eea;
+    }
+    .feature p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .keyboard-shortcuts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .shortcut {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .key {
+      background: #e9ecef;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Taschenrechner Widget</h1>
+    <p class="subtitle">Ein eleganter Taschenrechner für jede Webseite</p>
+
+    <div class="card">
+      <h2>Bookmarklet installieren</h2>
+      <p>Ziehe den folgenden Button in deine Lesezeichenleiste, um den Taschenrechner auf jeder Webseite nutzen zu können:</p>
+
+      <div class="bookmarklet-container">
+        <a class="bookmarklet-link" href="javascript:(function(){if(document.getElementById('calc-widget-container')){document.getElementById('calc-widget-container').remove();return}const e=`%23calc-widget-container{position:fixed;top:20px;right:20px;z-index:999999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}%23calc-widget{width:280px;background:linear-gradient(145deg,%232d2d2d,%231a1a1a);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.4);overflow:hidden;user-select:none}%23calc-header{background:linear-gradient(145deg,%233a3a3a,%232d2d2d);padding:10px 15px;cursor:move;display:flex;justify-content:space-between;align-items:center}%23calc-header span{color:%23fff;font-weight:600;font-size:14px}%23calc-close{background:%23ff5f57;border:none;width:14px;height:14px;border-radius:50%25;cursor:pointer;transition:opacity 0.2s}%23calc-close:hover{opacity:0.8}%23calc-display{background:%231a1a1a;padding:20px 15px;text-align:right}%23calc-expression{color:%23888;font-size:14px;height:18px;overflow:hidden;text-overflow:ellipsis}%23calc-result{color:%23fff;font-size:36px;font-weight:300;overflow:hidden;text-overflow:ellipsis}%23calc-buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:%23333;padding:1px}.calc-btn{border:none;padding:20px;font-size:20px;cursor:pointer;transition:background 0.1s;background:%23505050;color:%23fff}.calc-btn:hover{background:%23606060}.calc-btn:active{background:%23707070}.calc-btn.operator{background:%23ff9500;color:%23fff}.calc-btn.operator:hover{background:%23ffaa33}.calc-btn.operator:active{background:%23cc7700}.calc-btn.function{background:%23a5a5a5;color:%23000}.calc-btn.function:hover{background:%23b5b5b5}.calc-btn.zero{grid-column:span 2;text-align:left;padding-left:30px}.calc-btn.equals{background:%23ff9500}`;const t=document.createElement('style');t.textContent=decodeURIComponent(e);document.head.appendChild(t);const n=document.createElement('div');n.id='calc-widget-container';n.innerHTML=`<div id='calc-widget'><div id='calc-header'><span>Taschenrechner</span><button id='calc-close' title='Schließen'></button></div><div id='calc-display'><div id='calc-expression'></div><div id='calc-result'>0</div></div><div id='calc-buttons'><button class='calc-btn function' data-action='clear'>AC</button><button class='calc-btn function' data-action='sign'>+/-</button><button class='calc-btn function' data-action='percent'>%</button><button class='calc-btn operator' data-action='divide'>÷</button><button class='calc-btn' data-value='7'>7</button><button class='calc-btn' data-value='8'>8</button><button class='calc-btn' data-value='9'>9</button><button class='calc-btn operator' data-action='multiply'>×</button><button class='calc-btn' data-value='4'>4</button><button class='calc-btn' data-value='5'>5</button><button class='calc-btn' data-value='6'>6</button><button class='calc-btn operator' data-action='subtract'>−</button><button class='calc-btn' data-value='1'>1</button><button class='calc-btn' data-value='2'>2</button><button class='calc-btn' data-value='3'>3</button><button class='calc-btn operator' data-action='add'>+</button><button class='calc-btn zero' data-value='0'>0</button><button class='calc-btn' data-value='.'>.</button><button class='calc-btn operator equals' data-action='equals'>=</button></div></div>`;document.body.appendChild(n);let c='0',p='',o=null,r=false;const d=document.getElementById('calc-result'),x=document.getElementById('calc-expression');function u(){d.textContent=c}function i(v){r?(c=v,r=false):c=c==='0'?v:c+v;u()}function a(){r?(c='0.',r=false,u()):c.includes('.')||(c+='.',u())}function h(op){const v=parseFloat(c);if(o&&!r){const res=l();c=String(res);u()}p=c;o=op;r=true;const s={add:'+',subtract:'−',multiply:'×',divide:'÷'};x.textContent=p+' '+s[o]}function l(){const pr=parseFloat(p),cu=parseFloat(c);switch(o){case'add':return pr+cu;case'subtract':return pr-cu;case'multiply':return pr*cu;case'divide':return cu!==0?pr/cu:'Fehler';default:return cu}}function f(){if(!o)return;const s={add:'+',subtract:'−',multiply:'×',divide:'÷'};x.textContent=p+' '+s[o]+' '+c+' =';const res=l();c=typeof res==='number'?(Number.isInteger(res)?String(res):res.toFixed(8).replace(/\\.?0+$/,'')):res;o=null;r=true;u()}function g(){c='0';p='';o=null;r=false;x.textContent='';u()}document.getElementById('calc-buttons').addEventListener('click',(e)=>{if(!e.target.classList.contains('calc-btn'))return;const v=e.target.dataset.value,ac=e.target.dataset.action;if(v!==undefined){v==='.'?a():i(v)}else if(ac){switch(ac){case'clear':g();break;case'sign':c=String(parseFloat(c)*-1);u();break;case'percent':c=String(parseFloat(c)/100);u();break;case'equals':f();break;default:h(ac)}}});document.getElementById('calc-close').addEventListener('click',()=>{n.remove();t.remove()});const w=document.getElementById('calc-widget'),hd=document.getElementById('calc-header');let dr=false,dx,dy;hd.addEventListener('mousedown',(e)=>{if(e.target.id==='calc-close')return;dr=true;const rc=n.getBoundingClientRect();dx=e.clientX-rc.left;dy=e.clientY-rc.top;n.style.transition='none'});document.addEventListener('mousemove',(e)=>{if(!dr)return;n.style.left=(e.clientX-dx)+'px';n.style.top=(e.clientY-dy)+'px';n.style.right='auto'});document.addEventListener('mouseup',()=>{dr=false});document.addEventListener('keydown',(e)=>{if(!document.getElementById('calc-widget-container'))return;const k=e.key;if(/[0-9]/.test(k))i(k);else if(k==='.')a();else if(k==='+')h('add');else if(k==='-')h('subtract');else if(k==='*')h('multiply');else if(k==='/'){e.preventDefault();h('divide')}else if(k==='Enter'||k==='=')f();else if(k==='Escape')g();else if(k==='Backspace'){c=c.length>1?c.slice(0,-1):'0';u()}})})();">Taschenrechner</a>
+      </div>
+
+      <div class="instructions">
+        <strong>Installation:</strong>
+        <ol>
+          <li>Zeige deine Lesezeichenleiste an (<code>Strg+Shift+B</code> in Chrome/Edge, <code>Strg+B</code> in Firefox)</li>
+          <li>Ziehe den lilafarbenen "Taschenrechner" Button in deine Lesezeichenleiste</li>
+          <li>Besuche eine beliebige Webseite und klicke auf das Lesezeichen</li>
+          <li>Der Taschenrechner erscheint! Klicke erneut, um ihn zu schließen</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Demo ausprobieren</h2>
+      <p>Klicke auf den Button, um den Taschenrechner direkt auf dieser Seite zu testen:</p>
+      <div class="bookmarklet-container">
+        <button class="demo-btn" onclick="loadCalculator()">Demo starten</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Features</h2>
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">🧮</div>
+          <h3>Grundrechenarten</h3>
+          <p>Addition, Subtraktion, Multiplikation und Division</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🖱️</div>
+          <h3>Verschiebbar</h3>
+          <p>Das Widget kann frei auf der Seite positioniert werden</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">⌨️</div>
+          <h3>Tastatur-Support</h3>
+          <p>Nutze die Tastatur für schnelle Berechnungen</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🌐</div>
+          <h3>Überall nutzbar</h3>
+          <p>Funktioniert auf jeder Webseite</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tastatur-Shortcuts</h2>
+      <div class="keyboard-shortcuts">
+        <div class="shortcut"><span class="key">0-9</span> Ziffern</div>
+        <div class="shortcut"><span class="key">.</span> Dezimalpunkt</div>
+        <div class="shortcut"><span class="key">+</span> Addition</div>
+        <div class="shortcut"><span class="key">-</span> Subtraktion</div>
+        <div class="shortcut"><span class="key">*</span> Multiplikation</div>
+        <div class="shortcut"><span class="key">/</span> Division</div>
+        <div class="shortcut"><span class="key">Enter</span> Berechnen</div>
+        <div class="shortcut"><span class="key">Esc</span> Löschen</div>
+        <div class="shortcut"><span class="key">Backspace</span> Ziffer löschen</div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Taschenrechner Widget - Einfach in jede Webseite einfügen</p>
+    </footer>
+  </div>
+
+  <script src="calculator-widget.js"></script>
+  <script>
+    function loadCalculator() {
+      // Trigger the calculator widget
+      const script = document.createElement('script');
+      script.src = 'calculator-widget.js';
+      document.body.appendChild(script);
+    }
+  </script>
+</body>
+</html>
