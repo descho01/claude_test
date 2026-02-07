@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goldener Schnitt - Kreise &amp; Graph</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d1117;
+      color: #c9d1d9;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      text-align: center;
+      padding: 30px 20px 10px;
+      max-width: 900px;
+    }
+    header h1 {
+      font-size: 1.8rem;
+      color: #d4a843;
+      margin-bottom: 8px;
+    }
+    header p {
+      font-size: 0.95rem;
+      color: #8b949e;
+      line-height: 1.5;
+    }
+    .formula {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 14px 20px;
+      margin: 12px auto;
+      font-family: 'Cambria Math', 'Times New Roman', serif;
+      font-size: 1.15rem;
+      color: #e6c97a;
+      display: inline-block;
+    }
+    .formula sub { font-size: 0.7em; }
+    #canvas-container {
+      position: relative;
+      margin: 15px auto;
+    }
+    canvas {
+      display: block;
+      border-radius: 12px;
+      background: #0d1117;
+    }
+    .controls {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 10px 20px 20px;
+    }
+    .controls label {
+      font-size: 0.85rem;
+      color: #8b949e;
+    }
+    .controls input[type="range"] {
+      width: 120px;
+      accent-color: #d4a843;
+    }
+    .controls span.val {
+      color: #d4a843;
+      font-weight: 600;
+      min-width: 20px;
+      display: inline-block;
+    }
+    .controls button {
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      padding: 6px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+    .controls button:hover { background: #30363d; }
+    .controls button.active {
+      background: #d4a843;
+      color: #0d1117;
+      border-color: #d4a843;
+    }
+    #info-panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 18px 24px;
+      max-width: 880px;
+      width: 90%;
+      margin-bottom: 30px;
+    }
+    #info-panel h3 {
+      color: #d4a843;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+    #info-panel table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    #info-panel th {
+      text-align: left;
+      color: #8b949e;
+      padding: 5px 10px;
+      border-bottom: 1px solid #30363d;
+    }
+    #info-panel td {
+      padding: 5px 10px;
+      border-bottom: 1px solid #21262d;
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+    #info-panel td.ratio {
+      color: #d4a843;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Goldener-Schnitt-Kreise &amp; Graph</h1>
+  <p>
+    Kreise, deren Flaechen F im Verhaeltnis des Goldenen Schnitts stehen.
+    Die Kreise beruehren sich an ihren Umfaengen. Die Verbindungslinien
+    der Mittelpunkte bilden den Graphen.
+  </p>
+  <div class="formula">
+    F<sub>n</sub> / F<sub>n+1</sub> = F<sub>n+1</sub> / (F<sub>n+1</sub> + F<sub>n</sub>)
+    &nbsp;=&nbsp; 1/&phi; &nbsp;&approx;&nbsp; 0.618
+  </div>
+</header>
+
+<div class="controls">
+  <label>Anzahl Kreise: <input type="range" id="countSlider" min="3" max="12" value="9">
+    <span class="val" id="countVal">9</span>
+  </label>
+  <button id="btnSpiral" class="active" data-mode="spiral">Spirale (90&deg;)</button>
+  <button id="btnGolden" data-mode="golden">Goldener Winkel</button>
+  <button id="btnLine" data-mode="line">Linear</button>
+  <button id="btnAnimate">Animation</button>
+</div>
+
+<div id="canvas-container">
+  <canvas id="canvas"></canvas>
+</div>
+
+<div id="info-panel">
+  <h3>Kreisdaten (Flaechen im Goldenen Schnitt)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Index</th>
+        <th>Radius r</th>
+        <th>Flaeche F = &pi;r&sup2;</th>
+        <th>F<sub>n+1</sub>/F<sub>n</sub></th>
+        <th>Abstand d (Mittelpunkte)</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const PHI = (1 + Math.sqrt(5)) / 2;       // 1.6180339...
+  const SQRT_PHI = Math.sqrt(PHI);           // 1.2720196...
+  const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5)); // ~2.399 rad = ~137.508 deg
+
+  let N = 9;
+  let mode = 'spiral';
+  let animating = false;
+  let animProgress = 0;
+  let animFrame = null;
+
+  const BASE_R = 12;
+
+  function getRadii(n) {
+    const radii = [];
+    for (let i = 0; i < n; i++) {
+      radii.push(BASE_R * Math.pow(SQRT_PHI, i));
+    }
+    return radii;
+  }
+
+  function getCenters(radii, layoutMode) {
+    const n = radii.length;
+    const centers = [{ x: 0, y: 0 }];
+
+    if (layoutMode === 'spiral') {
+      // 90-degree turns, creating a Fibonacci-like spiral
+      let angle = 0;
+      for (let i = 1; i < n; i++) {
+        const dist = radii[i - 1] + radii[i];
+        const prev = centers[i - 1];
+        centers.push({
+          x: prev.x + dist * Math.cos(angle),
+          y: prev.y - dist * Math.sin(angle)
+        });
+        angle += Math.PI / 2;
+      }
+    } else if (layoutMode === 'golden') {
+      // Golden angle arrangement
+      let angle = 0;
+      for (let i = 1; i < n; i++) {
+        const dist = radii[i - 1] + radii[i];
+        const prev = centers[i - 1];
+        centers.push({
+          x: prev.x + dist * Math.cos(angle),
+          y: prev.y - dist * Math.sin(angle)
+        });
+        angle += GOLDEN_ANGLE;
+      }
+    } else {
+      // Linear arrangement
+      let x = 0;
+      for (let i = 1; i < n; i++) {
+        x += radii[i - 1] + radii[i];
+        centers.push({ x: x, y: 0 });
+      }
+    }
+
+    return centers;
+  }
+
+  function fitToCanvas(centers, radii) {
+    const n = centers.length;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+    for (let i = 0; i < n; i++) {
+      minX = Math.min(minX, centers[i].x - radii[i]);
+      maxX = Math.max(maxX, centers[i].x + radii[i]);
+      minY = Math.min(minY, centers[i].y - radii[i]);
+      maxY = Math.max(maxY, centers[i].y + radii[i]);
+    }
+
+    const margin = 50;
+    const W = canvas.width - 2 * margin;
+    const H = canvas.height - 2 * margin;
+    const dataW = maxX - minX || 1;
+    const dataH = maxY - minY || 1;
+    const scale = Math.min(W / dataW, H / dataH);
+
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+
+    const transformed = centers.map(c => ({
+      x: (c.x - cx) * scale + canvas.width / 2,
+      y: (c.y - cy) * scale + canvas.height / 2
+    }));
+    const tRadii = radii.map(r => r * scale);
+
+    return { centers: transformed, radii: tRadii };
+  }
+
+  function getCircleColor(i, n) {
+    // Gradient from deep gold to warm amber
+    const t = n > 1 ? i / (n - 1) : 0;
+    const h = 35 + t * 15;     // hue 35-50
+    const s = 70 + t * 20;     // saturation
+    const l = 45 + t * 15;     // lightness
+    return `hsl(${h}, ${s}%, ${l}%)`;
+  }
+
+  function drawScene(progress) {
+    const dpr = window.devicePixelRatio || 1;
+    const displayW = Math.min(880, window.innerWidth - 40);
+    const displayH = Math.min(600, window.innerHeight - 340);
+    canvas.style.width = displayW + 'px';
+    canvas.style.height = displayH + 'px';
+    canvas.width = displayW * dpr;
+    canvas.height = displayH * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.clearRect(0, 0, displayW, displayH);
+
+    // Background subtle grid
+    ctx.strokeStyle = '#161b22';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx < displayW; gx += 40) {
+      ctx.beginPath();
+      ctx.moveTo(gx, 0);
+      ctx.lineTo(gx, displayH);
+      ctx.stroke();
+    }
+    for (let gy = 0; gy < displayH; gy += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.lineTo(displayW, gy);
+      ctx.stroke();
+    }
+
+    const radii = getRadii(N);
+    const rawCenters = getCenters(radii, mode);
+    const fit = fitToCanvas(rawCenters, radii);
+    const tc = fit.centers;
+    const tr = fit.radii;
+
+    const visibleCount = progress < 1 ? Math.floor(progress * N) + 1 : N;
+    const partialProgress = progress < 1 ? (progress * N) % 1 : 1;
+
+    // Draw graph edges (connecting centers)
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < visibleCount - 1; i++) {
+      const alpha = (i < visibleCount - 2) ? 1.0 : partialProgress;
+      ctx.strokeStyle = `rgba(212, 168, 67, ${0.8 * alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(tc[i].x, tc[i].y);
+      if (i === visibleCount - 2 && progress < 1) {
+        const lx = tc[i].x + (tc[i + 1].x - tc[i].x) * partialProgress;
+        const ly = tc[i].y + (tc[i + 1].y - tc[i].y) * partialProgress;
+        ctx.lineTo(lx, ly);
+      } else {
+        ctx.lineTo(tc[i + 1].x, tc[i + 1].y);
+      }
+      ctx.stroke();
+    }
+
+    // Draw circles
+    for (let i = 0; i < visibleCount; i++) {
+      const alpha = (i === visibleCount - 1 && progress < 1) ? partialProgress : 1.0;
+      const r = tr[i] * (i === visibleCount - 1 && progress < 1
+        ? 0.3 + 0.7 * partialProgress : 1.0);
+
+      // Circle fill
+      const grad = ctx.createRadialGradient(
+        tc[i].x - r * 0.3, tc[i].y - r * 0.3, r * 0.1,
+        tc[i].x, tc[i].y, r
+      );
+      const col = getCircleColor(i, N);
+      grad.addColorStop(0, col.replace(')', ', ' + 0.35 * alpha + ')').replace('hsl', 'hsla'));
+      grad.addColorStop(1, col.replace(')', ', ' + 0.08 * alpha + ')').replace('hsl', 'hsla'));
+
+      ctx.beginPath();
+      ctx.arc(tc[i].x, tc[i].y, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Circle stroke
+      ctx.strokeStyle = col.replace(')', ', ' + 0.9 * alpha + ')').replace('hsl', 'hsla');
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Draw center points and labels
+    for (let i = 0; i < visibleCount; i++) {
+      const alpha = (i === visibleCount - 1 && progress < 1) ? partialProgress : 1.0;
+
+      // Center dot
+      ctx.beginPath();
+      ctx.arc(tc[i].x, tc[i].y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * alpha})`;
+      ctx.fill();
+
+      // Index label
+      ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * alpha})`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Position label above center for readability
+      const labelOffset = Math.max(tr[i] * 0.4, 14);
+      ctx.fillText('K' + i, tc[i].x, tc[i].y - labelOffset);
+    }
+
+    // Draw distance annotations for first few edges
+    if (progress >= 1) {
+      ctx.font = '11px "Consolas", "Courier New", monospace';
+      const maxAnnotations = Math.min(N - 1, 4);
+      for (let i = 0; i < maxAnnotations; i++) {
+        const mx = (tc[i].x + tc[i + 1].x) / 2;
+        const my = (tc[i].y + tc[i + 1].y) / 2;
+        const dx = tc[i + 1].x - tc[i].x;
+        const dy = tc[i + 1].y - tc[i].y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        // Perpendicular offset
+        const px = -dy / len * 16;
+        const py = dx / len * 16;
+
+        ctx.fillStyle = 'rgba(139, 148, 158, 0.8)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const rawDist = radii[i] + radii[i + 1];
+        ctx.fillText('d=' + rawDist.toFixed(1), mx + px, my + py);
+      }
+    }
+  }
+
+  function updateTable() {
+    const radii = getRadii(N);
+    const tbody = document.getElementById('tableBody');
+    let html = '';
+
+    for (let i = 0; i < N; i++) {
+      const r = radii[i];
+      const area = Math.PI * r * r;
+      const ratioStr = i > 0
+        ? (Math.PI * r * r / (Math.PI * radii[i - 1] * radii[i - 1])).toFixed(6)
+        : '-';
+      const distStr = i > 0 ? (radii[i - 1] + radii[i]).toFixed(2) : '-';
+
+      html += `<tr>
+        <td>K${i}</td>
+        <td>${r.toFixed(4)}</td>
+        <td>${area.toFixed(4)}</td>
+        <td class="ratio">${ratioStr}</td>
+        <td>${distStr}</td>
+      </tr>`;
+    }
+    tbody.innerHTML = html;
+  }
+
+  function draw() {
+    drawScene(animating ? animProgress : 1);
+  }
+
+  function animate() {
+    if (!animating) return;
+    animProgress += 0.004;
+    if (animProgress >= 1) {
+      animProgress = 1;
+      animating = false;
+      document.getElementById('btnAnimate').classList.remove('active');
+    }
+    drawScene(animProgress);
+    if (animating) {
+      animFrame = requestAnimationFrame(animate);
+    }
+  }
+
+  // Event listeners
+  document.getElementById('countSlider').addEventListener('input', function() {
+    N = parseInt(this.value);
+    document.getElementById('countVal').textContent = N;
+    updateTable();
+    draw();
+  });
+
+  document.querySelectorAll('[data-mode]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      mode = this.dataset.mode;
+      document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      draw();
+    });
+  });
+
+  document.getElementById('btnAnimate').addEventListener('click', function() {
+    if (animating) {
+      animating = false;
+      cancelAnimationFrame(animFrame);
+      this.classList.remove('active');
+      draw();
+    } else {
+      animating = true;
+      animProgress = 0;
+      this.classList.add('active');
+      animate();
+    }
+  });
+
+  window.addEventListener('resize', draw);
+
+  // Initial render
+  updateTable();
+  draw();
+})();
+</script>
+
+</body>
+</html>
