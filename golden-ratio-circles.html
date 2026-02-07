@@ -49,6 +49,16 @@
       border-radius: 12px;
       background: #0d1117;
     }
+    .section-title {
+      color: #d4a843;
+      font-size: 1.3rem;
+      margin: 30px 0 10px;
+      text-align: center;
+      max-width: 960px;
+      width: 95%;
+      border-top: 1px solid #30363d;
+      padding-top: 25px;
+    }
     .controls {
       display: flex;
       gap: 15px;
@@ -68,7 +78,7 @@
     .controls span.val {
       color: #d4a843;
       font-weight: 600;
-      min-width: 20px;
+      min-width: 30px;
       display: inline-block;
     }
     .controls button {
@@ -101,7 +111,7 @@
       border-radius: 10px;
       padding: 18px 22px;
       flex: 1;
-      min-width: 300px;
+      min-width: 280px;
     }
     .panel h3 {
       color: #d4a843;
@@ -138,11 +148,13 @@
       width: 95%;
       margin-bottom: 20px;
     }
+    .result-box.green { border-color: #58d68d; }
     .result-box h3 {
       color: #d4a843;
       margin-bottom: 10px;
       font-size: 1.1rem;
     }
+    .result-box.green h3 { color: #58d68d; }
     .result-box p {
       line-height: 1.7;
       font-size: 0.92rem;
@@ -176,6 +188,8 @@
     r<sub>n+1</sub> / r<sub>n</sub> = &radic;&phi; &approx; 1.2720
   </div>
 </header>
+
+<!-- ==================== TEIL 1: Goldener Schnitt ==================== -->
 
 <div class="controls">
   <label>Anzahl Kreise: <input type="range" id="countSlider" min="3" max="14" value="9">
@@ -229,7 +243,7 @@
 
 <div class="panels">
   <div class="panel">
-    <h3>Kreisdaten</h3>
+    <h3>Kreisdaten (Goldener Schnitt)</h3>
     <table>
       <thead>
         <tr>
@@ -249,469 +263,591 @@
   </div>
 </div>
 
+<!-- ==================== TEIL 2: Verallgemeinerung ==================== -->
+
+<h2 class="section-title">Verallgemeinerung: Gilt das nur fuer den Goldenen Schnitt?</h2>
+
+<div class="result-box green">
+  <h3>Nein! Es gilt fuer JEDES konstante Flaechenverhaeltnis.</h3>
+  <p>
+    Fuer <em>beliebige</em> Kreise, deren Radien eine geometrische Folge bilden
+    (r<sub>i+1</sub> = q &middot; r<sub>i</sub> mit konstantem q &gt; 1),
+    vereinfacht sich die Steigung zu:
+  </p>
+  <p class="math">
+    m(q) = &Delta;h/&Delta;x = (q &minus; 1) / (2&radic;q)
+  </p>
+  <p>
+    Der entscheidende Punkt: <span class="highlight">r<sub>i</sub> kuerzt sich vollstaendig heraus!</span>
+    Die Steigung haengt <em>nur</em> vom Verhaeltnis q ab, nicht vom Index i.
+    Daher liegen die Mittelpunkte <span class="highlight">fuer jedes q immer auf einer exakten Geraden</span>.
+  </p>
+  <p>
+    Der Goldene Schnitt ist also kein Sonderfall &mdash; er liefert lediglich
+    eine bestimmte Steigung unter unendlich vielen moeglichen.
+  </p>
+</div>
+
+<div class="controls">
+  <label>Flaechenverhaeltnis F<sub>n+1</sub>/F<sub>n</sub>:
+    <input type="range" id="ratioSlider" min="110" max="500" value="162" step="1">
+    <span class="val" id="ratioVal">1.62</span>
+  </label>
+  <button id="btnPhi" class="active">Goldener Schnitt (&phi;)</button>
+  <button id="btnR2">Verdopplung (2)</button>
+  <button id="btnR3">Verdreifachung (3)</button>
+  <button id="btnR4">Vervierfachung (4)</button>
+</div>
+
+<canvas id="compareCanvas"></canvas>
+
+<div class="panels">
+  <div class="panel">
+    <h3>Vergleichstabelle: Steigung m(q)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Flaechenverh.</th>
+          <th>Radienverh. q</th>
+          <th>Steigung m</th>
+          <th>Winkel &alpha;</th>
+        </tr>
+      </thead>
+      <tbody id="compareTable"></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h3>Steigung m(q) = (q&minus;1) / (2&radic;q)</h3>
+    <canvas id="slopeCanvas" width="400" height="280"></canvas>
+  </div>
+</div>
+
 <script>
 (function() {
-  const mainCanvas = document.getElementById('mainCanvas');
-  const mainCtx = mainCanvas.getContext('2d');
-  const plotCanvas = document.getElementById('plotCanvas');
-  const plotCtx = plotCanvas.getContext('2d');
-
   const PHI = (1 + Math.sqrt(5)) / 2;
   const SQRT_PHI = Math.sqrt(PHI);
-  const PHI_QUARTER = Math.pow(PHI, 0.25);
-  const SLOPE = (SQRT_PHI - 1) / (2 * PHI_QUARTER); // ~0.12060
-  const ANGLE_DEG = Math.atan(SLOPE) * 180 / Math.PI; // ~6.88
+
+  // General slope formula
+  function slopeForQ(q) { return (q - 1) / (2 * Math.sqrt(q)); }
 
   let N = 9;
+  let areaRatio = PHI;    // F_{n+1}/F_n
   let animating = false;
   let animProgress = 0;
   let animFrame = null;
-
   const BASE_R = 10;
 
-  // Compute radii: r_i = BASE_R * (sqrt(phi))^i
-  function getRadii(n) {
+  function getRadii(n, q) {
     const radii = [];
-    for (let i = 0; i < n; i++) {
-      radii.push(BASE_R * Math.pow(SQRT_PHI, i));
-    }
+    for (let i = 0; i < n; i++) radii.push(BASE_R * Math.pow(q, i));
     return radii;
   }
 
-  // Compute centers on the ground plane
-  // Circle i: center at (x_i, r_i), sits on y=0
-  // Tangency: horizontal gap = 2*sqrt(r_i * r_{i+1})
-  function getCentersOnPlane(radii) {
+  function getCenters(radii) {
     const n = radii.length;
     const centers = [{ x: 0, y: radii[0] }];
     let xAcc = 0;
     for (let i = 1; i < n; i++) {
-      const dx = 2 * Math.sqrt(radii[i - 1] * radii[i]);
-      xAcc += dx;
+      xAcc += 2 * Math.sqrt(radii[i - 1] * radii[i]);
       centers.push({ x: xAcc, y: radii[i] });
     }
     return centers;
   }
 
-  function getCircleColor(i, n) {
+  function circleColor(i, n) {
     const t = n > 1 ? i / (n - 1) : 0;
-    const h = 30 + t * 20;
-    const s = 65 + t * 25;
-    const l = 42 + t * 18;
-    return { h, s, l, str: `hsl(${h}, ${s}%, ${l}%)` };
+    return { h: 30 + t * 20, s: 65 + t * 25, l: 42 + t * 18 };
   }
+  function hsla(c, a) { return `hsla(${c.h}, ${c.s}%, ${c.l}%, ${a})`; }
+  function hsl(c) { return `hsl(${c.h}, ${c.s}%, ${c.l}%)`; }
 
-  function hsla(c, a) {
-    return `hsla(${c.h}, ${c.s}%, ${c.l}%, ${a})`;
-  }
+  // ====================== MAIN CANVAS (Golden Ratio) ======================
 
-  // ========== MAIN CANVAS ==========
+  const mainCanvas = document.getElementById('mainCanvas');
+  const mainCtx = mainCanvas.getContext('2d');
+
   function drawMain(progress) {
     const dpr = window.devicePixelRatio || 1;
-    const displayW = Math.min(940, window.innerWidth - 30);
-    const displayH = Math.min(480, Math.max(300, window.innerHeight * 0.42));
-    mainCanvas.style.width = displayW + 'px';
-    mainCanvas.style.height = displayH + 'px';
-    mainCanvas.width = displayW * dpr;
-    mainCanvas.height = displayH * dpr;
+    const W = Math.min(940, window.innerWidth - 30);
+    const H = Math.min(480, Math.max(300, window.innerHeight * 0.42));
+    mainCanvas.style.width = W + 'px';
+    mainCanvas.style.height = H + 'px';
+    mainCanvas.width = W * dpr;
+    mainCanvas.height = H * dpr;
     mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const ctx = mainCtx;
+    ctx.clearRect(0, 0, W, H);
 
-    ctx.clearRect(0, 0, displayW, displayH);
+    const q = SQRT_PHI;
+    const slope = slopeForQ(q);
+    const radii = getRadii(N, q);
+    const centers = getCenters(radii);
 
-    const radii = getRadii(N);
-    const centers = getCentersOnPlane(radii);
-
-    // Determine bounding box
     const maxR = radii[N - 1];
     const maxX = centers[N - 1].x + maxR;
     const maxY = 2 * maxR;
+    const mL = 55, mR = 30, mB = 35, mT = 40;
+    const scale = Math.min((W - mL - mR) / maxX, (H - mT - mB) / maxY);
+    const gY = H - mB;
 
-    // Fit into canvas with margins
-    const marginL = 55, marginR = 30, marginB = 35, marginT = 40;
-    const drawW = displayW - marginL - marginR;
-    const drawH = displayH - marginT - marginB;
+    function tx(x) { return mL + x * scale; }
+    function ty(y) { return gY - y * scale; }
 
-    const scaleX = drawW / maxX;
-    const scaleY = drawH / maxY;
-    const scale = Math.min(scaleX, scaleY);
+    // Grid
+    ctx.strokeStyle = '#161b22'; ctx.lineWidth = 1;
+    for (let gx = mL; gx < W - mR; gx += 50) { ctx.beginPath(); ctx.moveTo(gx, mT); ctx.lineTo(gx, gY); ctx.stroke(); }
+    for (let gy = mT; gy <= gY; gy += 50) { ctx.beginPath(); ctx.moveTo(mL, gy); ctx.lineTo(W - mR, gy); ctx.stroke(); }
 
-    // Ground plane at bottom
-    const groundY = displayH - marginB;
+    // Ground
+    ctx.strokeStyle = '#4a5568'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(mL - 10, gY); ctx.lineTo(W - mR + 10, gY); ctx.stroke();
+    ctx.fillStyle = '#4a5568'; ctx.font = '12px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Auflage-Ebene', W / 2, gY + 20);
 
-    function tx(x) { return marginL + x * scale; }
-    function ty(y) { return groundY - y * scale; }
-    function tr(r) { return r * scale; }
+    const vis = progress < 1 ? Math.floor(progress * N) + 1 : N;
+    const part = progress < 1 ? (progress * N) % 1 : 1;
 
-    // Subtle grid
-    ctx.strokeStyle = '#161b22';
-    ctx.lineWidth = 1;
-    for (let gx = marginL; gx < displayW - marginR; gx += 50) {
-      ctx.beginPath(); ctx.moveTo(gx, marginT); ctx.lineTo(gx, groundY); ctx.stroke();
-    }
-    for (let gy = marginT; gy <= groundY; gy += 50) {
-      ctx.beginPath(); ctx.moveTo(marginL, gy); ctx.lineTo(displayW - marginR, gy); ctx.stroke();
-    }
-
-    // Ground plane
-    ctx.strokeStyle = '#4a5568';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(marginL - 10, groundY);
-    ctx.lineTo(displayW - marginR + 10, groundY);
-    ctx.stroke();
-
-    // Label ground
-    ctx.fillStyle = '#4a5568';
-    ctx.font = '12px "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Auflage-Ebene', displayW / 2, groundY + 20);
-
-    // Visible count for animation
-    const visCount = progress < 1 ? Math.floor(progress * N) + 1 : N;
-    const partial = progress < 1 ? (progress * N) % 1 : 1;
-
-    // Draw tangent points on ground (small ticks)
-    for (let i = 0; i < visCount; i++) {
-      const alpha = (i === visCount - 1 && progress < 1) ? partial : 1;
-      ctx.strokeStyle = `rgba(74, 85, 104, ${0.6 * alpha})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(tx(centers[i].x), groundY - 4);
-      ctx.lineTo(tx(centers[i].x), groundY + 4);
-      ctx.stroke();
-    }
-
-    // Draw height lines (dashed, from ground to center)
-    for (let i = 0; i < visCount; i++) {
-      const alpha = (i === visCount - 1 && progress < 1) ? partial : 1;
-      ctx.strokeStyle = `rgba(139, 148, 158, ${0.25 * alpha})`;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(tx(centers[i].x), groundY);
-      ctx.lineTo(tx(centers[i].x), ty(centers[i].y));
-      ctx.stroke();
+    // Height lines
+    for (let i = 0; i < vis; i++) {
+      const a = (i === vis - 1 && progress < 1) ? part : 1;
+      ctx.strokeStyle = `rgba(139,148,158,${0.25*a})`; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(tx(centers[i].x), gY); ctx.lineTo(tx(centers[i].x), ty(centers[i].y)); ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    // Draw the GRAPH (connecting centers) — the key result
-    if (visCount > 1) {
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#58d68d';
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.moveTo(tx(centers[0].x), ty(centers[0].y));
-      for (let i = 1; i < visCount; i++) {
-        if (i === visCount - 1 && progress < 1) {
-          const lx = centers[i - 1].x + (centers[i].x - centers[i - 1].x) * partial;
-          const ly = centers[i - 1].y + (centers[i].y - centers[i - 1].y) * partial;
-          ctx.lineTo(tx(lx), ty(ly));
-        } else {
-          ctx.lineTo(tx(centers[i].x), ty(centers[i].y));
-        }
+    // Graph line
+    if (vis > 1) {
+      ctx.lineWidth = 3; ctx.strokeStyle = '#58d68d';
+      ctx.beginPath(); ctx.moveTo(tx(centers[0].x), ty(centers[0].y));
+      for (let i = 1; i < vis; i++) {
+        if (i === vis - 1 && progress < 1) {
+          ctx.lineTo(
+            tx(centers[i-1].x + (centers[i].x - centers[i-1].x) * part),
+            ty(centers[i-1].y + (centers[i].y - centers[i-1].y) * part)
+          );
+        } else ctx.lineTo(tx(centers[i].x), ty(centers[i].y));
       }
       ctx.stroke();
 
-      // Extended theoretical line (dashed)
       if (progress >= 1) {
-        ctx.strokeStyle = 'rgba(88, 214, 141, 0.3)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([8, 6]);
-        const extX = maxX * 1.08;
-        const extY = radii[0] + SLOPE * extX;
-        ctx.beginPath();
-        ctx.moveTo(tx(0), ty(radii[0]));
-        ctx.lineTo(tx(extX), ty(extY));
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Label the line
-        const lblX = centers[N - 1].x * 0.65;
-        const lblY = radii[0] + SLOPE * lblX;
-        ctx.save();
-        ctx.translate(tx(lblX), ty(lblY) - 14);
-        ctx.rotate(-Math.atan(SLOPE * scale / scale)); // flat because scale is same
-        ctx.fillStyle = '#58d68d';
-        ctx.font = 'bold 12px "Segoe UI", sans-serif';
-        ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(88,214,141,0.3)'; ctx.lineWidth = 1.5; ctx.setLineDash([8,6]);
+        ctx.beginPath(); ctx.moveTo(tx(0), ty(radii[0]));
+        ctx.lineTo(tx(maxX*1.08), ty(radii[0] + slope * maxX * 1.08)); ctx.stroke(); ctx.setLineDash([]);
+        const lblX = centers[N-1].x * 0.6;
+        ctx.save(); ctx.translate(tx(lblX), ty(radii[0] + slope * lblX) - 14);
+        ctx.rotate(-Math.atan(slope));
+        ctx.fillStyle = '#58d68d'; ctx.font = 'bold 12px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
         ctx.fillText('Gerade: m \u2248 0.1206, \u03B1 \u2248 6.88\u00B0', 0, 0);
         ctx.restore();
       }
     }
 
-    // Draw circles
-    for (let i = 0; i < visCount; i++) {
-      const alpha = (i === visCount - 1 && progress < 1) ? partial : 1;
-      const r = tr(radii[i]) * (i === visCount - 1 && progress < 1 ? 0.3 + 0.7 * partial : 1);
-      const cx = tx(centers[i].x);
-      const cy = ty(centers[i].y);
-      const col = getCircleColor(i, N);
-
-      // Fill with gradient
-      const grad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, r * 0.05, cx, cy, r);
-      grad.addColorStop(0, hsla(col, 0.30 * alpha));
-      grad.addColorStop(1, hsla(col, 0.06 * alpha));
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // Stroke
-      ctx.strokeStyle = hsla(col, 0.85 * alpha);
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Tangent point between circle i and ground
-      ctx.fillStyle = `rgba(74, 85, 104, ${0.5 * alpha})`;
-      ctx.beginPath();
-      ctx.arc(cx, groundY, 2.5, 0, Math.PI * 2);
-      ctx.fill();
+    // Circles
+    for (let i = 0; i < vis; i++) {
+      const a = (i === vis - 1 && progress < 1) ? part : 1;
+      const r = radii[i] * scale * (i === vis-1 && progress < 1 ? 0.3+0.7*part : 1);
+      const cx = tx(centers[i].x), cy = ty(centers[i].y);
+      const col = circleColor(i, N);
+      const grad = ctx.createRadialGradient(cx-r*0.2, cy-r*0.2, r*0.05, cx, cy, r);
+      grad.addColorStop(0, hsla(col, 0.30*a)); grad.addColorStop(1, hsla(col, 0.06*a));
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fillStyle = grad; ctx.fill();
+      ctx.strokeStyle = hsla(col, 0.85*a); ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = `rgba(74,85,104,${0.5*a})`; ctx.beginPath(); ctx.arc(cx, gY, 2.5, 0, Math.PI*2); ctx.fill();
     }
 
-    // Draw tangent points between adjacent circles
-    for (let i = 0; i < visCount - 1; i++) {
-      const alpha = (i === visCount - 2 && progress < 1) ? partial : 1;
-      // Tangent point is on the line connecting centers, at distance r_i from center i
-      const c1 = centers[i], c2 = centers[i + 1];
-      const dist = radii[i] + radii[i + 1];
-      const dx = c2.x - c1.x, dy = c2.y - c1.y;
-      const tpx = c1.x + dx * radii[i] / dist;
-      const tpy = c1.y + dy * radii[i] / dist;
-
-      ctx.fillStyle = `rgba(212, 168, 67, ${0.6 * alpha})`;
-      ctx.beginPath();
-      ctx.arc(tx(tpx), ty(tpy), 3, 0, Math.PI * 2);
-      ctx.fill();
+    // Tangent points between circles
+    for (let i = 0; i < vis - 1; i++) {
+      const a = (i === vis-2 && progress < 1) ? part : 1;
+      const d = radii[i] + radii[i+1];
+      const dx = centers[i+1].x - centers[i].x, dy = centers[i+1].y - centers[i].y;
+      ctx.fillStyle = `rgba(212,168,67,${0.6*a})`; ctx.beginPath();
+      ctx.arc(tx(centers[i].x + dx*radii[i]/d), ty(centers[i].y + dy*radii[i]/d), 3, 0, Math.PI*2); ctx.fill();
     }
 
-    // Center points and labels
-    for (let i = 0; i < visCount; i++) {
-      const alpha = (i === visCount - 1 && progress < 1) ? partial : 1;
-      const cx = tx(centers[i].x);
-      const cy = ty(centers[i].y);
-
-      // Center dot
-      ctx.beginPath();
-      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * alpha})`;
-      ctx.fill();
-
-      // Label
-      const labelR = tr(radii[i]);
-      const above = Math.max(labelR * 0.45, 15);
+    // Center dots + labels
+    for (let i = 0; i < vis; i++) {
+      const a = (i === vis-1 && progress < 1) ? part : 1;
+      const cx = tx(centers[i].x), cy = ty(centers[i].y);
+      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${0.95*a})`; ctx.fill();
       ctx.font = 'bold 12px "Segoe UI", sans-serif';
-      ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * alpha})`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText('K' + i, cx, cy - above);
-
-      // Height annotation for first few
-      if (i < 5 && progress >= 1) {
-        ctx.font = '10px "Consolas", monospace';
-        ctx.fillStyle = 'rgba(139, 148, 158, 0.7)';
-        ctx.textAlign = 'left';
-        ctx.fillText('h=' + radii[i].toFixed(1), cx + 8, cy + 3);
-      }
+      ctx.fillStyle = `rgba(255,255,255,${0.9*a})`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('K'+i, cx, cy - Math.max(radii[i]*scale*0.45, 15));
     }
-
-    // Y-axis label
-    ctx.save();
-    ctx.translate(14, displayH / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '12px "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Hoehe h = r', 0, 0);
-    ctx.restore();
-
-    // X-axis label
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '12px "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('x (horizontale Position)', displayW / 2, groundY + 32);
-  }
-
-  // ========== PLOT CANVAS (h vs x) ==========
-  function drawPlot() {
-    const dpr = window.devicePixelRatio || 1;
-    const displayW = plotCanvas.clientWidth || 400;
-    const displayH = plotCanvas.clientHeight || 280;
-    plotCanvas.width = displayW * dpr;
-    plotCanvas.height = displayH * dpr;
-    plotCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const ctx = plotCtx;
-
-    ctx.clearRect(0, 0, displayW, displayH);
-
-    const radii = getRadii(N);
-    const centers = getCentersOnPlane(radii);
-
-    const marginL = 50, marginR = 20, marginT = 20, marginB = 40;
-    const pw = displayW - marginL - marginR;
-    const ph = displayH - marginT - marginB;
-
-    const maxX = centers[N - 1].x * 1.05;
-    const maxH = radii[N - 1] * 1.15;
-
-    function px(x) { return marginL + (x / maxX) * pw; }
-    function py(h) { return displayH - marginB - (h / maxH) * ph; }
-
-    // Axes
-    ctx.strokeStyle = '#30363d';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(marginL, marginT);
-    ctx.lineTo(marginL, displayH - marginB);
-    ctx.lineTo(displayW - marginR, displayH - marginB);
-    ctx.stroke();
 
     // Axis labels
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '11px "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('x', displayW / 2, displayH - 6);
-
-    ctx.save();
-    ctx.translate(12, displayH / 2 - 10);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText('h(x)', 0, 0);
-    ctx.restore();
-
-    // Tick marks
-    ctx.font = '9px "Consolas", monospace';
-    ctx.fillStyle = '#6e7681';
-    const xStep = Math.pow(10, Math.floor(Math.log10(maxX))) / 2;
-    for (let xv = 0; xv <= maxX; xv += xStep) {
-      const sx = px(xv);
-      ctx.beginPath();
-      ctx.moveTo(sx, displayH - marginB);
-      ctx.lineTo(sx, displayH - marginB + 4);
-      ctx.stroke();
-      ctx.textAlign = 'center';
-      ctx.fillText(Math.round(xv), sx, displayH - marginB + 14);
-    }
-    const yStep = Math.pow(10, Math.floor(Math.log10(maxH))) / 2;
-    for (let yv = 0; yv <= maxH; yv += yStep) {
-      const sy = py(yv);
-      ctx.beginPath();
-      ctx.moveTo(marginL - 4, sy);
-      ctx.lineTo(marginL, sy);
-      ctx.stroke();
-      ctx.textAlign = 'right';
-      ctx.fillText(Math.round(yv), marginL - 8, sy + 3);
-    }
-
-    // Theoretical line: h(x) = r_0 + SLOPE * x
-    ctx.strokeStyle = 'rgba(88, 214, 141, 0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6, 4]);
-    ctx.beginPath();
-    ctx.moveTo(px(0), py(radii[0]));
-    ctx.lineTo(px(maxX), py(radii[0] + SLOPE * maxX));
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Plot actual data points and line
-    ctx.strokeStyle = '#d4a843';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(px(centers[0].x), py(centers[0].y));
-    for (let i = 1; i < N; i++) {
-      ctx.lineTo(px(centers[i].x), py(centers[i].y));
-    }
-    ctx.stroke();
-
-    // Data points
-    for (let i = 0; i < N; i++) {
-      const col = getCircleColor(i, N);
-      ctx.beginPath();
-      ctx.arc(px(centers[i].x), py(centers[i].y), 5, 0, Math.PI * 2);
-      ctx.fillStyle = col.str;
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-
-    // Legend
-    ctx.font = '10px "Segoe UI", sans-serif';
-    ctx.fillStyle = '#d4a843';
-    ctx.textAlign = 'left';
-    ctx.fillText('\u25CF Mittelpunkte K\u1D62', marginL + 10, marginT + 14);
-    ctx.fillStyle = 'rgba(88, 214, 141, 0.7)';
-    ctx.fillText('--- Gerade h = r\u2080 + m\u00B7x', marginL + 10, marginT + 28);
+    ctx.save(); ctx.translate(14, H/2); ctx.rotate(-Math.PI/2);
+    ctx.fillStyle = '#8b949e'; ctx.font = '12px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Hoehe h = r', 0, 0); ctx.restore();
+    ctx.fillStyle = '#8b949e'; ctx.font = '12px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('x (horizontale Position)', W/2, gY + 32);
   }
 
-  // ========== TABLE ==========
-  function updateTable() {
-    const radii = getRadii(N);
-    const centers = getCentersOnPlane(radii);
-    const tbody = document.getElementById('tableBody');
+  // ====================== PLOT CANVAS (h vs x) ======================
+
+  const plotCanvas = document.getElementById('plotCanvas');
+  const plotCtx = plotCanvas.getContext('2d');
+
+  function drawPlot() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = plotCanvas.clientWidth || 400, H = plotCanvas.clientHeight || 280;
+    plotCanvas.width = W*dpr; plotCanvas.height = H*dpr;
+    plotCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ctx = plotCtx;
+    ctx.clearRect(0, 0, W, H);
+
+    const q = SQRT_PHI, slope = slopeForQ(q);
+    const radii = getRadii(N, q), centers = getCenters(radii);
+    const mL = 50, mR = 20, mT = 20, mB = 40;
+    const pw = W-mL-mR, ph = H-mT-mB;
+    const maxX = centers[N-1].x * 1.05, maxH = radii[N-1] * 1.15;
+    function px(x) { return mL + (x/maxX)*pw; }
+    function py(h) { return H-mB - (h/maxH)*ph; }
+
+    ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(mL, mT); ctx.lineTo(mL, H-mB); ctx.lineTo(W-mR, H-mB); ctx.stroke();
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('x', W/2, H-6);
+    ctx.save(); ctx.translate(12, H/2-10); ctx.rotate(-Math.PI/2); ctx.fillText('h(x)', 0, 0); ctx.restore();
+
+    // Ticks
+    ctx.font = '9px "Consolas", monospace'; ctx.fillStyle = '#6e7681';
+    const xS = Math.pow(10, Math.floor(Math.log10(maxX)))/2;
+    for (let v=0; v<=maxX; v+=xS) { const s=px(v); ctx.beginPath(); ctx.moveTo(s,H-mB); ctx.lineTo(s,H-mB+4); ctx.stroke(); ctx.textAlign='center'; ctx.fillText(Math.round(v),s,H-mB+14); }
+    const yS = Math.pow(10, Math.floor(Math.log10(maxH)))/2;
+    for (let v=0; v<=maxH; v+=yS) { const s=py(v); ctx.beginPath(); ctx.moveTo(mL-4,s); ctx.lineTo(mL,s); ctx.stroke(); ctx.textAlign='right'; ctx.fillText(Math.round(v),mL-8,s+3); }
+
+    // Theoretical line
+    ctx.strokeStyle = 'rgba(88,214,141,0.4)'; ctx.lineWidth = 1.5; ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.moveTo(px(0), py(radii[0])); ctx.lineTo(px(maxX), py(radii[0]+slope*maxX)); ctx.stroke(); ctx.setLineDash([]);
+
+    // Data line + points
+    ctx.strokeStyle = '#d4a843'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px(centers[0].x), py(centers[0].y));
+    for (let i=1; i<N; i++) ctx.lineTo(px(centers[i].x), py(centers[i].y));
+    ctx.stroke();
+    for (let i=0; i<N; i++) {
+      const col = circleColor(i, N);
+      ctx.beginPath(); ctx.arc(px(centers[i].x), py(centers[i].y), 5, 0, Math.PI*2);
+      ctx.fillStyle = hsl(col); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    ctx.font = '10px "Segoe UI", sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#d4a843'; ctx.fillText('\u25CF Mittelpunkte K\u1D62', mL+10, mT+14);
+    ctx.fillStyle = 'rgba(88,214,141,0.7)'; ctx.fillText('--- Gerade h = r\u2080 + m\u00B7x', mL+10, mT+28);
+  }
+
+  // ====================== COMPARE CANVAS (variable ratio) ======================
+
+  const compareCanvas = document.getElementById('compareCanvas');
+  const compareCtx = compareCanvas.getContext('2d');
+
+  const RATIO_COLORS = [
+    { h: 35, s: 85, l: 55 },  // gold (phi)
+    { h: 200, s: 70, l: 55 }, // blue
+    { h: 340, s: 70, l: 55 }, // red
+    { h: 140, s: 60, l: 45 }, // green
+    { h: 280, s: 60, l: 55 }, // purple
+  ];
+
+  function drawCompare() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = Math.min(940, window.innerWidth - 30);
+    const H = Math.min(460, Math.max(280, window.innerHeight * 0.40));
+    compareCanvas.style.width = W + 'px';
+    compareCanvas.style.height = H + 'px';
+    compareCanvas.width = W*dpr; compareCanvas.height = H*dpr;
+    compareCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ctx = compareCtx;
+    ctx.clearRect(0, 0, W, H);
+
+    const q = Math.sqrt(areaRatio); // radius ratio
+    const nCircles = Math.min(N, 10);
+    const radii = getRadii(nCircles, q);
+    const centers = getCenters(radii);
+    const slope = slopeForQ(q);
+    const angleDeg = Math.atan(slope) * 180 / Math.PI;
+
+    const maxR = radii[nCircles - 1];
+    const maxX = centers[nCircles - 1].x + maxR;
+    const maxY = 2 * maxR;
+    const mL = 55, mR = 30, mB = 35, mT = 40;
+    const scale = Math.min((W-mL-mR)/maxX, (H-mT-mB)/maxY);
+    const gY = H - mB;
+
+    function tx(x) { return mL + x*scale; }
+    function ty(y) { return gY - y*scale; }
+
+    // Grid
+    ctx.strokeStyle = '#161b22'; ctx.lineWidth = 1;
+    for (let gx=mL; gx<W-mR; gx+=50) { ctx.beginPath(); ctx.moveTo(gx,mT); ctx.lineTo(gx,gY); ctx.stroke(); }
+    for (let gy=mT; gy<=gY; gy+=50) { ctx.beginPath(); ctx.moveTo(mL,gy); ctx.lineTo(W-mR,gy); ctx.stroke(); }
+
+    // Ground
+    ctx.strokeStyle = '#4a5568'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(mL-10, gY); ctx.lineTo(W-mR+10, gY); ctx.stroke();
+    ctx.fillStyle = '#4a5568'; ctx.font = '12px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Auflage-Ebene', W/2, gY+20);
+
+    // Height lines
+    for (let i = 0; i < nCircles; i++) {
+      ctx.strokeStyle = 'rgba(139,148,158,0.20)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(tx(centers[i].x), gY); ctx.lineTo(tx(centers[i].x), ty(centers[i].y)); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Graph (center line)
+    ctx.lineWidth = 3; ctx.strokeStyle = '#58d68d';
+    ctx.beginPath(); ctx.moveTo(tx(centers[0].x), ty(centers[0].y));
+    for (let i=1; i<nCircles; i++) ctx.lineTo(tx(centers[i].x), ty(centers[i].y));
+    ctx.stroke();
+
+    // Extended line
+    ctx.strokeStyle = 'rgba(88,214,141,0.3)'; ctx.lineWidth = 1.5; ctx.setLineDash([8,6]);
+    ctx.beginPath(); ctx.moveTo(tx(0), ty(radii[0]));
+    ctx.lineTo(tx(maxX*1.05), ty(radii[0]+slope*maxX*1.05)); ctx.stroke(); ctx.setLineDash([]);
+
+    // Circles
+    for (let i=0; i<nCircles; i++) {
+      const r = radii[i]*scale;
+      const cx = tx(centers[i].x), cy = ty(centers[i].y);
+      const col = circleColor(i, nCircles);
+      const grad = ctx.createRadialGradient(cx-r*0.2, cy-r*0.2, r*0.05, cx, cy, r);
+      grad.addColorStop(0, hsla(col, 0.30)); grad.addColorStop(1, hsla(col, 0.06));
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fillStyle = grad; ctx.fill();
+      ctx.strokeStyle = hsla(col, 0.85); ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = 'rgba(74,85,104,0.5)'; ctx.beginPath(); ctx.arc(cx, gY, 2.5, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Tangent dots
+    for (let i=0; i<nCircles-1; i++) {
+      const d = radii[i]+radii[i+1];
+      const dx = centers[i+1].x-centers[i].x, dy = centers[i+1].y-centers[i].y;
+      ctx.fillStyle = 'rgba(212,168,67,0.5)'; ctx.beginPath();
+      ctx.arc(tx(centers[i].x+dx*radii[i]/d), ty(centers[i].y+dy*radii[i]/d), 3, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Center dots
+    for (let i=0; i<nCircles; i++) {
+      const cx = tx(centers[i].x), cy = ty(centers[i].y);
+      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
+      ctx.font = 'bold 11px "Segoe UI", sans-serif'; ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('K'+i, cx, cy - Math.max(radii[i]*scale*0.4, 13));
+    }
+
+    // Info label
+    ctx.fillStyle = '#58d68d'; ctx.font = 'bold 13px "Segoe UI", sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(
+      `F-Verh. = ${areaRatio.toFixed(3)}   q = ${q.toFixed(4)}   m = ${slope.toFixed(4)}   \u03B1 = ${angleDeg.toFixed(2)}\u00B0`,
+      mL + 5, mT + 5
+    );
+
+    // Axis labels
+    ctx.save(); ctx.translate(14, H/2); ctx.rotate(-Math.PI/2);
+    ctx.fillStyle = '#8b949e'; ctx.font = '12px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Hoehe h = r', 0, 0); ctx.restore();
+    ctx.fillStyle = '#8b949e'; ctx.textAlign = 'center'; ctx.fillText('x', W/2, gY+32);
+  }
+
+  // ====================== SLOPE FUNCTION CANVAS ======================
+
+  const slopeCanvas = document.getElementById('slopeCanvas');
+  const slopeCtx = slopeCanvas.getContext('2d');
+
+  const NOTABLE_RATIOS = [
+    { areaR: PHI,  label: '\u03C6', color: '#d4a843' },
+    { areaR: 2,    label: '2',      color: '#5dade2' },
+    { areaR: 3,    label: '3',      color: '#ec7063' },
+    { areaR: 4,    label: '4',      color: '#58d68d' },
+    { areaR: 10,   label: '10',     color: '#bb8fce' },
+  ];
+
+  function drawSlopePlot() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = slopeCanvas.clientWidth || 400, H = slopeCanvas.clientHeight || 280;
+    slopeCanvas.width = W*dpr; slopeCanvas.height = H*dpr;
+    slopeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ctx = slopeCtx;
+    ctx.clearRect(0, 0, W, H);
+
+    const mL = 50, mR = 20, mT = 25, mB = 40;
+    const pw = W-mL-mR, ph = H-mT-mB;
+
+    // q range: 1.0 to 4.0, m range: 0 to 0.3
+    const qMin = 1.0, qMax = 4.0, mMin = 0, mMax = 0.30;
+    function px(q) { return mL + ((q-qMin)/(qMax-qMin))*pw; }
+    function py(m) { return H-mB - ((m-mMin)/(mMax-mMin))*ph; }
+
+    // Axes
+    ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(mL, mT); ctx.lineTo(mL, H-mB); ctx.lineTo(W-mR, H-mB); ctx.stroke();
+
+    // Grid lines
+    ctx.strokeStyle = '#1e242e'; ctx.lineWidth = 0.5;
+    for (let q = 1.5; q <= qMax; q += 0.5) {
+      ctx.beginPath(); ctx.moveTo(px(q), mT); ctx.lineTo(px(q), H-mB); ctx.stroke();
+    }
+    for (let m = 0.05; m <= mMax; m += 0.05) {
+      ctx.beginPath(); ctx.moveTo(mL, py(m)); ctx.lineTo(W-mR, py(m)); ctx.stroke();
+    }
+
+    // Axis labels
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Radienverhaeltnis q', W/2, H-5);
+    ctx.save(); ctx.translate(12, H/2-10); ctx.rotate(-Math.PI/2); ctx.fillText('Steigung m(q)', 0, 0); ctx.restore();
+
+    // Tick labels
+    ctx.font = '9px "Consolas", monospace'; ctx.fillStyle = '#6e7681';
+    for (let q=1.0; q<=qMax; q+=0.5) { ctx.textAlign='center'; ctx.fillText(q.toFixed(1), px(q), H-mB+14); }
+    for (let m=0; m<=mMax; m+=0.05) { ctx.textAlign='right'; ctx.fillText(m.toFixed(2), mL-6, py(m)+3); }
+
+    // The curve m(q)
+    ctx.strokeStyle = '#e6c97a'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let q = qMin + 0.01; q <= qMax; q += 0.01) {
+      const m = slopeForQ(q);
+      if (q < qMin + 0.02) ctx.moveTo(px(q), py(m));
+      else ctx.lineTo(px(q), py(m));
+    }
+    ctx.stroke();
+
+    // Notable points
+    for (const nr of NOTABLE_RATIOS) {
+      const q = Math.sqrt(nr.areaR);
+      if (q > qMax) continue;
+      const m = slopeForQ(q);
+      ctx.beginPath(); ctx.arc(px(q), py(m), 6, 0, Math.PI*2);
+      ctx.fillStyle = nr.color; ctx.fill();
+      ctx.strokeStyle = '#0d1117'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.fillStyle = nr.color;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('F=' + nr.label, px(q), py(m) - 10);
+      ctx.font = '9px "Consolas", monospace'; ctx.fillStyle = '#8b949e';
+      ctx.fillText(m.toFixed(3), px(q), py(m) + 16);
+    }
+
+    // Current ratio marker
+    const curQ = Math.sqrt(areaRatio);
+    if (curQ >= qMin && curQ <= qMax) {
+      const curM = slopeForQ(curQ);
+      ctx.setLineDash([3,3]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(px(curQ), H-mB); ctx.lineTo(px(curQ), py(curM)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mL, py(curM)); ctx.lineTo(px(curQ), py(curM)); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(px(curQ), py(curM), 4, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+    }
+
+    // Label
+    ctx.font = '10px "Segoe UI", sans-serif'; ctx.fillStyle = '#e6c97a'; ctx.textAlign = 'left';
+    ctx.fillText('m(q) = (q\u22121) / (2\u221Aq)', mL+10, mT+10);
+  }
+
+  // ====================== TABLES ======================
+
+  function updateGoldenTable() {
+    const radii = getRadii(N, SQRT_PHI);
+    const centers = getCenters(radii);
     let html = '';
-
-    for (let i = 0; i < N; i++) {
-      const slopeStr = i > 0
-        ? ((centers[i].y - centers[i - 1].y) / (centers[i].x - centers[i - 1].x)).toFixed(6)
-        : '-';
-      html += `<tr>
-        <td>K${i}</td>
-        <td>${radii[i].toFixed(4)}</td>
-        <td>${centers[i].y.toFixed(4)}</td>
-        <td>${centers[i].x.toFixed(2)}</td>
-        <td class="gold">${slopeStr}</td>
-      </tr>`;
+    for (let i=0; i<N; i++) {
+      const s = i > 0 ? ((centers[i].y-centers[i-1].y)/(centers[i].x-centers[i-1].x)).toFixed(6) : '-';
+      html += `<tr><td>K${i}</td><td>${radii[i].toFixed(4)}</td><td>${centers[i].y.toFixed(4)}</td><td>${centers[i].x.toFixed(2)}</td><td class="gold">${s}</td></tr>`;
     }
-    tbody.innerHTML = html;
+    document.getElementById('tableBody').innerHTML = html;
   }
 
-  // ========== ANIMATION ==========
-  function draw() {
+  function updateCompareTable() {
+    const entries = [
+      { label: '\u03C6 \u2248 1.618', aR: PHI },
+      { label: '2', aR: 2 },
+      { label: '3', aR: 3 },
+      { label: '4', aR: 4 },
+      { label: '10', aR: 10 },
+      { label: areaRatio.toFixed(3) + ' (Slider)', aR: areaRatio },
+    ];
+    let html = '';
+    for (const e of entries) {
+      const q = Math.sqrt(e.aR);
+      const m = slopeForQ(q);
+      const a = Math.atan(m) * 180 / Math.PI;
+      html += `<tr><td>${e.label}</td><td>${q.toFixed(4)}</td><td class="gold">${m.toFixed(6)}</td><td>${a.toFixed(2)}\u00B0</td></tr>`;
+    }
+    document.getElementById('compareTable').innerHTML = html;
+  }
+
+  // ====================== DRAW ALL ======================
+
+  function drawAll() {
     drawMain(animating ? animProgress : 1);
     drawPlot();
+    drawCompare();
+    drawSlopePlot();
   }
+
+  function updateAll() {
+    updateGoldenTable();
+    updateCompareTable();
+    drawAll();
+  }
+
+  // ====================== ANIMATION ======================
 
   function animate() {
     if (!animating) return;
     animProgress += 0.005;
     if (animProgress >= 1) {
-      animProgress = 1;
-      animating = false;
+      animProgress = 1; animating = false;
       document.getElementById('btnAnimate').classList.remove('active');
     }
     drawMain(animProgress);
-    if (animating) {
-      animFrame = requestAnimationFrame(animate);
-    }
+    if (animating) animFrame = requestAnimationFrame(animate);
   }
 
-  // ========== EVENTS ==========
+  // ====================== EVENTS ======================
+
   document.getElementById('countSlider').addEventListener('input', function() {
     N = parseInt(this.value);
     document.getElementById('countVal').textContent = N;
-    updateTable();
-    draw();
+    updateAll();
   });
 
   document.getElementById('btnAnimate').addEventListener('click', function() {
-    if (animating) {
-      animating = false;
-      cancelAnimationFrame(animFrame);
-      this.classList.remove('active');
-      draw();
-    } else {
-      animating = true;
-      animProgress = 0;
-      this.classList.add('active');
-      animate();
-    }
+    if (animating) { animating = false; cancelAnimationFrame(animFrame); this.classList.remove('active'); drawAll(); }
+    else { animating = true; animProgress = 0; this.classList.add('active'); animate(); }
   });
 
-  window.addEventListener('resize', draw);
+  document.getElementById('ratioSlider').addEventListener('input', function() {
+    areaRatio = parseInt(this.value) / 100;
+    document.getElementById('ratioVal').textContent = areaRatio.toFixed(2);
+    document.querySelectorAll('#btnPhi,#btnR2,#btnR3,#btnR4').forEach(b => b.classList.remove('active'));
+    updateCompareTable();
+    drawCompare();
+    drawSlopePlot();
+  });
 
-  // Initial render
-  updateTable();
-  draw();
+  function setRatio(val, btnId) {
+    areaRatio = val;
+    const slider = document.getElementById('ratioSlider');
+    slider.value = Math.round(val * 100);
+    document.getElementById('ratioVal').textContent = val.toFixed(2);
+    document.querySelectorAll('#btnPhi,#btnR2,#btnR3,#btnR4').forEach(b => b.classList.remove('active'));
+    document.getElementById(btnId).classList.add('active');
+    updateCompareTable(); drawCompare(); drawSlopePlot();
+  }
+
+  document.getElementById('btnPhi').addEventListener('click', () => setRatio(PHI, 'btnPhi'));
+  document.getElementById('btnR2').addEventListener('click', () => setRatio(2, 'btnR2'));
+  document.getElementById('btnR3').addEventListener('click', () => setRatio(3, 'btnR3'));
+  document.getElementById('btnR4').addEventListener('click', () => setRatio(4, 'btnR4'));
+
+  window.addEventListener('resize', drawAll);
+
+  // Init
+  updateAll();
 })();
 </script>
 
