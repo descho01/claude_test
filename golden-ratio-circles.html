@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Goldener Schnitt - Kreise &amp; Graph</title>
+  <title>Goldener Schnitt - Kreise auf einer Ebene</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -18,7 +18,7 @@
     header {
       text-align: center;
       padding: 30px 20px 10px;
-      max-width: 900px;
+      max-width: 960px;
     }
     header h1 {
       font-size: 1.8rem;
@@ -28,24 +28,22 @@
     header p {
       font-size: 0.95rem;
       color: #8b949e;
-      line-height: 1.5;
+      line-height: 1.6;
     }
-    .formula {
+    .formula-box {
       background: #161b22;
       border: 1px solid #30363d;
       border-radius: 8px;
-      padding: 14px 20px;
-      margin: 12px auto;
+      padding: 14px 22px;
+      margin: 14px auto;
       font-family: 'Cambria Math', 'Times New Roman', serif;
-      font-size: 1.15rem;
+      font-size: 1.1rem;
       color: #e6c97a;
       display: inline-block;
+      line-height: 1.8;
     }
-    .formula sub { font-size: 0.7em; }
-    #canvas-container {
-      position: relative;
-      margin: 15px auto;
-    }
+    .formula-box sub { font-size: 0.7em; }
+    .formula-box .label { color: #8b949e; font-size: 0.85rem; font-family: 'Segoe UI', sans-serif; }
     canvas {
       display: block;
       border-radius: 12px;
@@ -57,7 +55,7 @@
       align-items: center;
       flex-wrap: wrap;
       justify-content: center;
-      padding: 10px 20px 20px;
+      padding: 10px 20px 16px;
     }
     .controls label {
       font-size: 0.85rem;
@@ -89,38 +87,73 @@
       color: #0d1117;
       border-color: #d4a843;
     }
-    #info-panel {
+    .panels {
+      display: flex;
+      gap: 20px;
+      max-width: 960px;
+      width: 95%;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    .panel {
       background: #161b22;
       border: 1px solid #30363d;
       border-radius: 10px;
-      padding: 18px 24px;
-      max-width: 880px;
-      width: 90%;
-      margin-bottom: 30px;
+      padding: 18px 22px;
+      flex: 1;
+      min-width: 300px;
     }
-    #info-panel h3 {
+    .panel h3 {
       color: #d4a843;
       margin-bottom: 10px;
       font-size: 1rem;
     }
-    #info-panel table {
+    .panel table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
     }
-    #info-panel th {
+    .panel th {
       text-align: left;
       color: #8b949e;
-      padding: 5px 10px;
+      padding: 4px 8px;
       border-bottom: 1px solid #30363d;
+      font-size: 0.75rem;
     }
-    #info-panel td {
-      padding: 5px 10px;
+    .panel td {
+      padding: 4px 8px;
       border-bottom: 1px solid #21262d;
       font-family: 'Consolas', 'Courier New', monospace;
     }
-    #info-panel td.ratio {
+    .panel td.gold {
       color: #d4a843;
+      font-weight: 600;
+    }
+    .result-box {
+      background: #1c2333;
+      border: 2px solid #d4a843;
+      border-radius: 10px;
+      padding: 18px 22px;
+      max-width: 960px;
+      width: 95%;
+      margin-bottom: 20px;
+    }
+    .result-box h3 {
+      color: #d4a843;
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+    .result-box p {
+      line-height: 1.7;
+      font-size: 0.92rem;
+    }
+    .result-box .math {
+      font-family: 'Cambria Math', 'Times New Roman', serif;
+      color: #e6c97a;
+      font-size: 1.05rem;
+    }
+    .result-box .highlight {
+      color: #58d68d;
       font-weight: 600;
     }
   </style>
@@ -128,65 +161,115 @@
 <body>
 
 <header>
-  <h1>Goldener-Schnitt-Kreise &amp; Graph</h1>
+  <h1>Goldener-Schnitt-Kreise auf einer Ebene</h1>
   <p>
-    Kreise, deren Flaechen F im Verhaeltnis des Goldenen Schnitts stehen.
-    Die Kreise beruehren sich an ihren Umfaengen. Die Verbindungslinien
-    der Mittelpunkte bilden den Graphen.
+    Kreise mit Flaechen im Goldenen Schnitt liegen auf einer gemeinsamen
+    Auflage-Ebene und beruehren sich paarweise. Wie waechst der Graph
+    der Mittelpunkte?
   </p>
-  <div class="formula">
+  <div class="formula-box">
+    <span class="label">Flaechenverhaeltnis:</span><br>
     F<sub>n</sub> / F<sub>n+1</sub> = F<sub>n+1</sub> / (F<sub>n+1</sub> + F<sub>n</sub>)
-    &nbsp;=&nbsp; 1/&phi; &nbsp;&approx;&nbsp; 0.618
+    = 1/&phi; &approx; 0.618
+    <br>
+    <span class="label">Radienverhaeltnis:</span>
+    r<sub>n+1</sub> / r<sub>n</sub> = &radic;&phi; &approx; 1.2720
   </div>
 </header>
 
 <div class="controls">
-  <label>Anzahl Kreise: <input type="range" id="countSlider" min="3" max="12" value="9">
+  <label>Anzahl Kreise: <input type="range" id="countSlider" min="3" max="14" value="9">
     <span class="val" id="countVal">9</span>
   </label>
-  <button id="btnSpiral" class="active" data-mode="spiral">Spirale (90&deg;)</button>
-  <button id="btnGolden" data-mode="golden">Goldener Winkel</button>
-  <button id="btnLine" data-mode="line">Linear</button>
   <button id="btnAnimate">Animation</button>
 </div>
 
-<div id="canvas-container">
-  <canvas id="canvas"></canvas>
+<canvas id="mainCanvas"></canvas>
+
+<div class="result-box">
+  <h3>Ergebnis: Die Mittelpunkte liegen auf einer Geraden!</h3>
+  <p>
+    Jeder Kreis K<sub>i</sub> mit Radius r<sub>i</sub> hat seinen
+    Mittelpunkt auf Hoehe h<sub>i</sub> = r<sub>i</sub>.
+    Zwei benachbarte Kreise beruehren sich, also gilt fuer den
+    Mittelpunktsabstand:
+  </p>
+  <p class="math">
+    d(K<sub>i</sub>, K<sub>i+1</sub>) = r<sub>i</sub> + r<sub>i+1</sub>
+  </p>
+  <p>
+    Der horizontale Abstand ergibt sich aus dem Satz des Pythagoras:
+  </p>
+  <p class="math">
+    &Delta;x = &radic;(d&sup2; &minus; &Delta;h&sup2;)
+    = &radic;((r<sub>i</sub>+r<sub>i+1</sub>)&sup2; &minus; (r<sub>i+1</sub>&minus;r<sub>i</sub>)&sup2;)
+    = 2&radic;(r<sub>i</sub> &middot; r<sub>i+1</sub>)
+  </p>
+  <p>
+    Die Steigung zwischen zwei aufeinanderfolgenden Mittelpunkten:
+  </p>
+  <p class="math">
+    &Delta;h / &Delta;x
+    = (r<sub>i+1</sub> &minus; r<sub>i</sub>) / (2&radic;(r<sub>i</sub> &middot; r<sub>i+1</sub>))
+    = (&radic;&phi; &minus; 1) / (2 &middot; &phi;<sup>1/4</sup>)
+    <span class="highlight">&approx; 0.12060 = const.</span>
+  </p>
+  <p>
+    Da die Steigung <span class="highlight">fuer jedes Paar identisch</span> ist,
+    liegen alle Mittelpunkte exakt auf einer Geraden.
+    <br>
+    <span class="highlight">Die Potenz ist 1 (linear):</span>
+    <span class="math">h(x) = m &middot; x + r<sub>0</sub></span>
+    &ensp; mit Steigung
+    <span class="math">m = (&radic;&phi; &minus; 1) / (2&phi;<sup>1/4</sup>) &approx; 0.1206</span>,
+    entsprechend einem Winkel von
+    <span class="math highlight">&alpha; &approx; 6.88&deg;</span>.
+  </p>
 </div>
 
-<div id="info-panel">
-  <h3>Kreisdaten (Flaechen im Goldenen Schnitt)</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Index</th>
-        <th>Radius r</th>
-        <th>Flaeche F = &pi;r&sup2;</th>
-        <th>F<sub>n+1</sub>/F<sub>n</sub></th>
-        <th>Abstand d (Mittelpunkte)</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+<div class="panels">
+  <div class="panel">
+    <h3>Kreisdaten</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>i</th>
+          <th>r<sub>i</sub></th>
+          <th>h<sub>i</sub> = r<sub>i</sub></th>
+          <th>x<sub>i</sub></th>
+          <th>&Delta;y/&Delta;x</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h3>Graph h(x) der Mittelpunkte</h3>
+    <canvas id="plotCanvas" width="400" height="280"></canvas>
+  </div>
 </div>
 
 <script>
 (function() {
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+  const mainCanvas = document.getElementById('mainCanvas');
+  const mainCtx = mainCanvas.getContext('2d');
+  const plotCanvas = document.getElementById('plotCanvas');
+  const plotCtx = plotCanvas.getContext('2d');
 
-  const PHI = (1 + Math.sqrt(5)) / 2;       // 1.6180339...
-  const SQRT_PHI = Math.sqrt(PHI);           // 1.2720196...
-  const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5)); // ~2.399 rad = ~137.508 deg
+  const PHI = (1 + Math.sqrt(5)) / 2;
+  const SQRT_PHI = Math.sqrt(PHI);
+  const PHI_QUARTER = Math.pow(PHI, 0.25);
+  const SLOPE = (SQRT_PHI - 1) / (2 * PHI_QUARTER); // ~0.12060
+  const ANGLE_DEG = Math.atan(SLOPE) * 180 / Math.PI; // ~6.88
 
   let N = 9;
-  let mode = 'spiral';
   let animating = false;
   let animProgress = 0;
   let animFrame = null;
 
-  const BASE_R = 12;
+  const BASE_R = 10;
 
+  // Compute radii: r_i = BASE_R * (sqrt(phi))^i
   function getRadii(n) {
     const radii = [];
     for (let i = 0; i < n; i++) {
@@ -195,266 +278,419 @@
     return radii;
   }
 
-  function getCenters(radii, layoutMode) {
+  // Compute centers on the ground plane
+  // Circle i: center at (x_i, r_i), sits on y=0
+  // Tangency: horizontal gap = 2*sqrt(r_i * r_{i+1})
+  function getCentersOnPlane(radii) {
     const n = radii.length;
-    const centers = [{ x: 0, y: 0 }];
-
-    if (layoutMode === 'spiral') {
-      // 90-degree turns, creating a Fibonacci-like spiral
-      let angle = 0;
-      for (let i = 1; i < n; i++) {
-        const dist = radii[i - 1] + radii[i];
-        const prev = centers[i - 1];
-        centers.push({
-          x: prev.x + dist * Math.cos(angle),
-          y: prev.y - dist * Math.sin(angle)
-        });
-        angle += Math.PI / 2;
-      }
-    } else if (layoutMode === 'golden') {
-      // Golden angle arrangement
-      let angle = 0;
-      for (let i = 1; i < n; i++) {
-        const dist = radii[i - 1] + radii[i];
-        const prev = centers[i - 1];
-        centers.push({
-          x: prev.x + dist * Math.cos(angle),
-          y: prev.y - dist * Math.sin(angle)
-        });
-        angle += GOLDEN_ANGLE;
-      }
-    } else {
-      // Linear arrangement
-      let x = 0;
-      for (let i = 1; i < n; i++) {
-        x += radii[i - 1] + radii[i];
-        centers.push({ x: x, y: 0 });
-      }
+    const centers = [{ x: 0, y: radii[0] }];
+    let xAcc = 0;
+    for (let i = 1; i < n; i++) {
+      const dx = 2 * Math.sqrt(radii[i - 1] * radii[i]);
+      xAcc += dx;
+      centers.push({ x: xAcc, y: radii[i] });
     }
-
     return centers;
   }
 
-  function fitToCanvas(centers, radii) {
-    const n = centers.length;
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-
-    for (let i = 0; i < n; i++) {
-      minX = Math.min(minX, centers[i].x - radii[i]);
-      maxX = Math.max(maxX, centers[i].x + radii[i]);
-      minY = Math.min(minY, centers[i].y - radii[i]);
-      maxY = Math.max(maxY, centers[i].y + radii[i]);
-    }
-
-    const margin = 50;
-    const W = canvas.width - 2 * margin;
-    const H = canvas.height - 2 * margin;
-    const dataW = maxX - minX || 1;
-    const dataH = maxY - minY || 1;
-    const scale = Math.min(W / dataW, H / dataH);
-
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-
-    const transformed = centers.map(c => ({
-      x: (c.x - cx) * scale + canvas.width / 2,
-      y: (c.y - cy) * scale + canvas.height / 2
-    }));
-    const tRadii = radii.map(r => r * scale);
-
-    return { centers: transformed, radii: tRadii };
-  }
-
   function getCircleColor(i, n) {
-    // Gradient from deep gold to warm amber
     const t = n > 1 ? i / (n - 1) : 0;
-    const h = 35 + t * 15;     // hue 35-50
-    const s = 70 + t * 20;     // saturation
-    const l = 45 + t * 15;     // lightness
-    return `hsl(${h}, ${s}%, ${l}%)`;
+    const h = 30 + t * 20;
+    const s = 65 + t * 25;
+    const l = 42 + t * 18;
+    return { h, s, l, str: `hsl(${h}, ${s}%, ${l}%)` };
   }
 
-  function drawScene(progress) {
+  function hsla(c, a) {
+    return `hsla(${c.h}, ${c.s}%, ${c.l}%, ${a})`;
+  }
+
+  // ========== MAIN CANVAS ==========
+  function drawMain(progress) {
     const dpr = window.devicePixelRatio || 1;
-    const displayW = Math.min(880, window.innerWidth - 40);
-    const displayH = Math.min(600, window.innerHeight - 340);
-    canvas.style.width = displayW + 'px';
-    canvas.style.height = displayH + 'px';
-    canvas.width = displayW * dpr;
-    canvas.height = displayH * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const displayW = Math.min(940, window.innerWidth - 30);
+    const displayH = Math.min(480, Math.max(300, window.innerHeight * 0.42));
+    mainCanvas.style.width = displayW + 'px';
+    mainCanvas.style.height = displayH + 'px';
+    mainCanvas.width = displayW * dpr;
+    mainCanvas.height = displayH * dpr;
+    mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ctx = mainCtx;
 
     ctx.clearRect(0, 0, displayW, displayH);
 
-    // Background subtle grid
+    const radii = getRadii(N);
+    const centers = getCentersOnPlane(radii);
+
+    // Determine bounding box
+    const maxR = radii[N - 1];
+    const maxX = centers[N - 1].x + maxR;
+    const maxY = 2 * maxR;
+
+    // Fit into canvas with margins
+    const marginL = 55, marginR = 30, marginB = 35, marginT = 40;
+    const drawW = displayW - marginL - marginR;
+    const drawH = displayH - marginT - marginB;
+
+    const scaleX = drawW / maxX;
+    const scaleY = drawH / maxY;
+    const scale = Math.min(scaleX, scaleY);
+
+    // Ground plane at bottom
+    const groundY = displayH - marginB;
+
+    function tx(x) { return marginL + x * scale; }
+    function ty(y) { return groundY - y * scale; }
+    function tr(r) { return r * scale; }
+
+    // Subtle grid
     ctx.strokeStyle = '#161b22';
     ctx.lineWidth = 1;
-    for (let gx = 0; gx < displayW; gx += 40) {
-      ctx.beginPath();
-      ctx.moveTo(gx, 0);
-      ctx.lineTo(gx, displayH);
-      ctx.stroke();
+    for (let gx = marginL; gx < displayW - marginR; gx += 50) {
+      ctx.beginPath(); ctx.moveTo(gx, marginT); ctx.lineTo(gx, groundY); ctx.stroke();
     }
-    for (let gy = 0; gy < displayH; gy += 40) {
-      ctx.beginPath();
-      ctx.moveTo(0, gy);
-      ctx.lineTo(displayW, gy);
-      ctx.stroke();
+    for (let gy = marginT; gy <= groundY; gy += 50) {
+      ctx.beginPath(); ctx.moveTo(marginL, gy); ctx.lineTo(displayW - marginR, gy); ctx.stroke();
     }
 
-    const radii = getRadii(N);
-    const rawCenters = getCenters(radii, mode);
-    const fit = fitToCanvas(rawCenters, radii);
-    const tc = fit.centers;
-    const tr = fit.radii;
+    // Ground plane
+    ctx.strokeStyle = '#4a5568';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(marginL - 10, groundY);
+    ctx.lineTo(displayW - marginR + 10, groundY);
+    ctx.stroke();
 
-    const visibleCount = progress < 1 ? Math.floor(progress * N) + 1 : N;
-    const partialProgress = progress < 1 ? (progress * N) % 1 : 1;
+    // Label ground
+    ctx.fillStyle = '#4a5568';
+    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Auflage-Ebene', displayW / 2, groundY + 20);
 
-    // Draw graph edges (connecting centers)
-    ctx.lineWidth = 2.5;
-    for (let i = 0; i < visibleCount - 1; i++) {
-      const alpha = (i < visibleCount - 2) ? 1.0 : partialProgress;
-      ctx.strokeStyle = `rgba(212, 168, 67, ${0.8 * alpha})`;
+    // Visible count for animation
+    const visCount = progress < 1 ? Math.floor(progress * N) + 1 : N;
+    const partial = progress < 1 ? (progress * N) % 1 : 1;
+
+    // Draw tangent points on ground (small ticks)
+    for (let i = 0; i < visCount; i++) {
+      const alpha = (i === visCount - 1 && progress < 1) ? partial : 1;
+      ctx.strokeStyle = `rgba(74, 85, 104, ${0.6 * alpha})`;
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(tc[i].x, tc[i].y);
-      if (i === visibleCount - 2 && progress < 1) {
-        const lx = tc[i].x + (tc[i + 1].x - tc[i].x) * partialProgress;
-        const ly = tc[i].y + (tc[i + 1].y - tc[i].y) * partialProgress;
-        ctx.lineTo(lx, ly);
-      } else {
-        ctx.lineTo(tc[i + 1].x, tc[i + 1].y);
+      ctx.moveTo(tx(centers[i].x), groundY - 4);
+      ctx.lineTo(tx(centers[i].x), groundY + 4);
+      ctx.stroke();
+    }
+
+    // Draw height lines (dashed, from ground to center)
+    for (let i = 0; i < visCount; i++) {
+      const alpha = (i === visCount - 1 && progress < 1) ? partial : 1;
+      ctx.strokeStyle = `rgba(139, 148, 158, ${0.25 * alpha})`;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(tx(centers[i].x), groundY);
+      ctx.lineTo(tx(centers[i].x), ty(centers[i].y));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Draw the GRAPH (connecting centers) — the key result
+    if (visCount > 1) {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#58d68d';
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(tx(centers[0].x), ty(centers[0].y));
+      for (let i = 1; i < visCount; i++) {
+        if (i === visCount - 1 && progress < 1) {
+          const lx = centers[i - 1].x + (centers[i].x - centers[i - 1].x) * partial;
+          const ly = centers[i - 1].y + (centers[i].y - centers[i - 1].y) * partial;
+          ctx.lineTo(tx(lx), ty(ly));
+        } else {
+          ctx.lineTo(tx(centers[i].x), ty(centers[i].y));
+        }
       }
       ctx.stroke();
+
+      // Extended theoretical line (dashed)
+      if (progress >= 1) {
+        ctx.strokeStyle = 'rgba(88, 214, 141, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([8, 6]);
+        const extX = maxX * 1.08;
+        const extY = radii[0] + SLOPE * extX;
+        ctx.beginPath();
+        ctx.moveTo(tx(0), ty(radii[0]));
+        ctx.lineTo(tx(extX), ty(extY));
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Label the line
+        const lblX = centers[N - 1].x * 0.65;
+        const lblY = radii[0] + SLOPE * lblX;
+        ctx.save();
+        ctx.translate(tx(lblX), ty(lblY) - 14);
+        ctx.rotate(-Math.atan(SLOPE * scale / scale)); // flat because scale is same
+        ctx.fillStyle = '#58d68d';
+        ctx.font = 'bold 12px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Gerade: m \u2248 0.1206, \u03B1 \u2248 6.88\u00B0', 0, 0);
+        ctx.restore();
+      }
     }
 
     // Draw circles
-    for (let i = 0; i < visibleCount; i++) {
-      const alpha = (i === visibleCount - 1 && progress < 1) ? partialProgress : 1.0;
-      const r = tr[i] * (i === visibleCount - 1 && progress < 1
-        ? 0.3 + 0.7 * partialProgress : 1.0);
-
-      // Circle fill
-      const grad = ctx.createRadialGradient(
-        tc[i].x - r * 0.3, tc[i].y - r * 0.3, r * 0.1,
-        tc[i].x, tc[i].y, r
-      );
+    for (let i = 0; i < visCount; i++) {
+      const alpha = (i === visCount - 1 && progress < 1) ? partial : 1;
+      const r = tr(radii[i]) * (i === visCount - 1 && progress < 1 ? 0.3 + 0.7 * partial : 1);
+      const cx = tx(centers[i].x);
+      const cy = ty(centers[i].y);
       const col = getCircleColor(i, N);
-      grad.addColorStop(0, col.replace(')', ', ' + 0.35 * alpha + ')').replace('hsl', 'hsla'));
-      grad.addColorStop(1, col.replace(')', ', ' + 0.08 * alpha + ')').replace('hsl', 'hsla'));
 
+      // Fill with gradient
+      const grad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, r * 0.05, cx, cy, r);
+      grad.addColorStop(0, hsla(col, 0.30 * alpha));
+      grad.addColorStop(1, hsla(col, 0.06 * alpha));
       ctx.beginPath();
-      ctx.arc(tc[i].x, tc[i].y, r, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Circle stroke
-      ctx.strokeStyle = col.replace(')', ', ' + 0.9 * alpha + ')').replace('hsl', 'hsla');
+      // Stroke
+      ctx.strokeStyle = hsla(col, 0.85 * alpha);
       ctx.lineWidth = 2;
       ctx.stroke();
+
+      // Tangent point between circle i and ground
+      ctx.fillStyle = `rgba(74, 85, 104, ${0.5 * alpha})`;
+      ctx.beginPath();
+      ctx.arc(cx, groundY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // Draw center points and labels
-    for (let i = 0; i < visibleCount; i++) {
-      const alpha = (i === visibleCount - 1 && progress < 1) ? partialProgress : 1.0;
+    // Draw tangent points between adjacent circles
+    for (let i = 0; i < visCount - 1; i++) {
+      const alpha = (i === visCount - 2 && progress < 1) ? partial : 1;
+      // Tangent point is on the line connecting centers, at distance r_i from center i
+      const c1 = centers[i], c2 = centers[i + 1];
+      const dist = radii[i] + radii[i + 1];
+      const dx = c2.x - c1.x, dy = c2.y - c1.y;
+      const tpx = c1.x + dx * radii[i] / dist;
+      const tpy = c1.y + dy * radii[i] / dist;
+
+      ctx.fillStyle = `rgba(212, 168, 67, ${0.6 * alpha})`;
+      ctx.beginPath();
+      ctx.arc(tx(tpx), ty(tpy), 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Center points and labels
+    for (let i = 0; i < visCount; i++) {
+      const alpha = (i === visCount - 1 && progress < 1) ? partial : 1;
+      const cx = tx(centers[i].x);
+      const cy = ty(centers[i].y);
 
       // Center dot
       ctx.beginPath();
-      ctx.arc(tc[i].x, tc[i].y, 4, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * alpha})`;
       ctx.fill();
 
-      // Index label
-      ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+      // Label
+      const labelR = tr(radii[i]);
+      const above = Math.max(labelR * 0.45, 15);
+      ctx.font = 'bold 12px "Segoe UI", sans-serif';
       ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * alpha})`;
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('K' + i, cx, cy - above);
 
-      // Position label above center for readability
-      const labelOffset = Math.max(tr[i] * 0.4, 14);
-      ctx.fillText('K' + i, tc[i].x, tc[i].y - labelOffset);
-    }
-
-    // Draw distance annotations for first few edges
-    if (progress >= 1) {
-      ctx.font = '11px "Consolas", "Courier New", monospace';
-      const maxAnnotations = Math.min(N - 1, 4);
-      for (let i = 0; i < maxAnnotations; i++) {
-        const mx = (tc[i].x + tc[i + 1].x) / 2;
-        const my = (tc[i].y + tc[i + 1].y) / 2;
-        const dx = tc[i + 1].x - tc[i].x;
-        const dy = tc[i + 1].y - tc[i].y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        // Perpendicular offset
-        const px = -dy / len * 16;
-        const py = dx / len * 16;
-
-        ctx.fillStyle = 'rgba(139, 148, 158, 0.8)';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const rawDist = radii[i] + radii[i + 1];
-        ctx.fillText('d=' + rawDist.toFixed(1), mx + px, my + py);
+      // Height annotation for first few
+      if (i < 5 && progress >= 1) {
+        ctx.font = '10px "Consolas", monospace';
+        ctx.fillStyle = 'rgba(139, 148, 158, 0.7)';
+        ctx.textAlign = 'left';
+        ctx.fillText('h=' + radii[i].toFixed(1), cx + 8, cy + 3);
       }
     }
+
+    // Y-axis label
+    ctx.save();
+    ctx.translate(14, displayH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Hoehe h = r', 0, 0);
+    ctx.restore();
+
+    // X-axis label
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '12px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('x (horizontale Position)', displayW / 2, groundY + 32);
   }
 
+  // ========== PLOT CANVAS (h vs x) ==========
+  function drawPlot() {
+    const dpr = window.devicePixelRatio || 1;
+    const displayW = plotCanvas.clientWidth || 400;
+    const displayH = plotCanvas.clientHeight || 280;
+    plotCanvas.width = displayW * dpr;
+    plotCanvas.height = displayH * dpr;
+    plotCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ctx = plotCtx;
+
+    ctx.clearRect(0, 0, displayW, displayH);
+
+    const radii = getRadii(N);
+    const centers = getCentersOnPlane(radii);
+
+    const marginL = 50, marginR = 20, marginT = 20, marginB = 40;
+    const pw = displayW - marginL - marginR;
+    const ph = displayH - marginT - marginB;
+
+    const maxX = centers[N - 1].x * 1.05;
+    const maxH = radii[N - 1] * 1.15;
+
+    function px(x) { return marginL + (x / maxX) * pw; }
+    function py(h) { return displayH - marginB - (h / maxH) * ph; }
+
+    // Axes
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(marginL, marginT);
+    ctx.lineTo(marginL, displayH - marginB);
+    ctx.lineTo(displayW - marginR, displayH - marginB);
+    ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('x', displayW / 2, displayH - 6);
+
+    ctx.save();
+    ctx.translate(12, displayH / 2 - 10);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('h(x)', 0, 0);
+    ctx.restore();
+
+    // Tick marks
+    ctx.font = '9px "Consolas", monospace';
+    ctx.fillStyle = '#6e7681';
+    const xStep = Math.pow(10, Math.floor(Math.log10(maxX))) / 2;
+    for (let xv = 0; xv <= maxX; xv += xStep) {
+      const sx = px(xv);
+      ctx.beginPath();
+      ctx.moveTo(sx, displayH - marginB);
+      ctx.lineTo(sx, displayH - marginB + 4);
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.fillText(Math.round(xv), sx, displayH - marginB + 14);
+    }
+    const yStep = Math.pow(10, Math.floor(Math.log10(maxH))) / 2;
+    for (let yv = 0; yv <= maxH; yv += yStep) {
+      const sy = py(yv);
+      ctx.beginPath();
+      ctx.moveTo(marginL - 4, sy);
+      ctx.lineTo(marginL, sy);
+      ctx.stroke();
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(yv), marginL - 8, sy + 3);
+    }
+
+    // Theoretical line: h(x) = r_0 + SLOPE * x
+    ctx.strokeStyle = 'rgba(88, 214, 141, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(px(0), py(radii[0]));
+    ctx.lineTo(px(maxX), py(radii[0] + SLOPE * maxX));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Plot actual data points and line
+    ctx.strokeStyle = '#d4a843';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px(centers[0].x), py(centers[0].y));
+    for (let i = 1; i < N; i++) {
+      ctx.lineTo(px(centers[i].x), py(centers[i].y));
+    }
+    ctx.stroke();
+
+    // Data points
+    for (let i = 0; i < N; i++) {
+      const col = getCircleColor(i, N);
+      ctx.beginPath();
+      ctx.arc(px(centers[i].x), py(centers[i].y), 5, 0, Math.PI * 2);
+      ctx.fillStyle = col.str;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Legend
+    ctx.font = '10px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#d4a843';
+    ctx.textAlign = 'left';
+    ctx.fillText('\u25CF Mittelpunkte K\u1D62', marginL + 10, marginT + 14);
+    ctx.fillStyle = 'rgba(88, 214, 141, 0.7)';
+    ctx.fillText('--- Gerade h = r\u2080 + m\u00B7x', marginL + 10, marginT + 28);
+  }
+
+  // ========== TABLE ==========
   function updateTable() {
     const radii = getRadii(N);
+    const centers = getCentersOnPlane(radii);
     const tbody = document.getElementById('tableBody');
     let html = '';
 
     for (let i = 0; i < N; i++) {
-      const r = radii[i];
-      const area = Math.PI * r * r;
-      const ratioStr = i > 0
-        ? (Math.PI * r * r / (Math.PI * radii[i - 1] * radii[i - 1])).toFixed(6)
+      const slopeStr = i > 0
+        ? ((centers[i].y - centers[i - 1].y) / (centers[i].x - centers[i - 1].x)).toFixed(6)
         : '-';
-      const distStr = i > 0 ? (radii[i - 1] + radii[i]).toFixed(2) : '-';
-
       html += `<tr>
         <td>K${i}</td>
-        <td>${r.toFixed(4)}</td>
-        <td>${area.toFixed(4)}</td>
-        <td class="ratio">${ratioStr}</td>
-        <td>${distStr}</td>
+        <td>${radii[i].toFixed(4)}</td>
+        <td>${centers[i].y.toFixed(4)}</td>
+        <td>${centers[i].x.toFixed(2)}</td>
+        <td class="gold">${slopeStr}</td>
       </tr>`;
     }
     tbody.innerHTML = html;
   }
 
+  // ========== ANIMATION ==========
   function draw() {
-    drawScene(animating ? animProgress : 1);
+    drawMain(animating ? animProgress : 1);
+    drawPlot();
   }
 
   function animate() {
     if (!animating) return;
-    animProgress += 0.004;
+    animProgress += 0.005;
     if (animProgress >= 1) {
       animProgress = 1;
       animating = false;
       document.getElementById('btnAnimate').classList.remove('active');
     }
-    drawScene(animProgress);
+    drawMain(animProgress);
     if (animating) {
       animFrame = requestAnimationFrame(animate);
     }
   }
 
-  // Event listeners
+  // ========== EVENTS ==========
   document.getElementById('countSlider').addEventListener('input', function() {
     N = parseInt(this.value);
     document.getElementById('countVal').textContent = N;
     updateTable();
     draw();
-  });
-
-  document.querySelectorAll('[data-mode]').forEach(btn => {
-    btn.addEventListener('click', function() {
-      mode = this.dataset.mode;
-      document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      draw();
-    });
   });
 
   document.getElementById('btnAnimate').addEventListener('click', function() {
