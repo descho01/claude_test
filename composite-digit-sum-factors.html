@@ -196,6 +196,7 @@
     <label for="nInput">Obergrenze n:</label>
     <input type="number" id="nInput" value="10000" min="4" max="10000000">
     <button id="runBtn" onclick="run()">Berechnen</button>
+    <button id="sortBtn" onclick="toggleSort()" disabled>&#x25B2; Aufsteigend sortieren</button>
 </div>
 
 <div class="info-bar" id="infoBar"></div>
@@ -316,29 +317,45 @@ const tooltip = document.getElementById('tooltip');
 
 let currentData = null;
 let barRects = []; // store bar positions for hover
+let lastFreq = null;
+let lastN = null;
+let sortedMode = false;
 
-function drawChart(freq, n) {
-    // All possible q values: tens digit 1-9, ones digit 1-9 => 11..19, 21..29, ..., 91..99
+function buildLabels() {
     const labels = [];
     for (let tens = 1; tens <= 9; tens++) {
         for (let ones = 1; ones <= 9; ones++) {
             labels.push(tens * 10 + ones);
         }
     }
+    return labels;
+}
 
-    const values = labels.map(q => freq[q] || 0);
+function drawChart(freq, n, sorted) {
+    const allLabels = buildLabels();
+    const allValues = allLabels.map(q => freq[q] || 0);
+
+    // Build paired array for potential sorting
+    let pairs = allLabels.map((q, i) => ({ q: q, count: allValues[i] }));
+    if (sorted) {
+        pairs.sort((a, b) => a.count - b.count || a.q - b.q);
+    }
+
+    const labels = pairs.map(p => p.q);
+    const values = pairs.map(p => p.count);
     const maxVal = Math.max(...values, 1);
 
     const barCount = labels.length; // 81
     const barWidth = 12;
     const barGap = 2;
-    const groupGap = 8; // extra gap between groups of 9
+    const groupGap = sorted ? 0 : 8; // no group gaps when sorted
+    const numGroupGaps = sorted ? 0 : 8;
     const marginLeft = 60;
     const marginRight = 20;
     const marginTop = 30;
     const marginBottom = 60;
 
-    const chartWidth = barCount * (barWidth + barGap) + 8 * groupGap + marginLeft + marginRight;
+    const chartWidth = barCount * (barWidth + barGap) + numGroupGaps * groupGap + marginLeft + marginRight;
     const chartHeight = 420;
 
     const dpr = window.devicePixelRatio || 1;
@@ -382,36 +399,58 @@ function drawChart(freq, n) {
     ctx.fillText('Haeufigkeit h', 0, 0);
     ctx.restore();
 
-    // Bars
-    barRects = [];
+    // Color lookup: each q gets a color based on its tens digit (Q2)
     const colors = [
         '#e94560', '#ff6b6b', '#ffa502', '#ffd32a',
         '#7bed9f', '#2ed573', '#1e90ff', '#70a1ff', '#a29bfe'
     ];
 
+    // Bars
+    barRects = [];
+    let prevGroupIdx = -1;
+    let groupGapAccum = 0;
+
     for (let idx = 0; idx < barCount; idx++) {
-        const groupIdx = Math.floor(idx / 9);
-        const x = marginLeft + idx * (barWidth + barGap) + groupIdx * groupGap;
+        if (!sorted) {
+            const groupIdx = Math.floor(idx / 9);
+            groupGapAccum = groupIdx * groupGap;
+        }
+        const x = marginLeft + idx * (barWidth + barGap) + groupGapAccum;
         const barH = (values[idx] / maxVal) * plotHeight;
         const y = marginTop + plotHeight - barH;
 
-        const color = colors[groupIdx % colors.length];
+        const tensDigit = Math.floor(labels[idx] / 10); // Q2
+        const color = colors[(tensDigit - 1) % colors.length];
         ctx.fillStyle = color;
         ctx.fillRect(x, y, barWidth, barH);
 
         barRects.push({ x, y, w: barWidth, h: barH, q: labels[idx], count: values[idx] });
 
-        // X-axis labels: show label for first and last in each group, and every 3rd
-        const inGroup = idx % 9;
-        if (inGroup === 0 || inGroup === 4 || inGroup === 8) {
-            ctx.save();
-            ctx.translate(x + barWidth / 2, marginTop + plotHeight + 6);
-            ctx.rotate(Math.PI / 4);
-            ctx.textAlign = 'left';
-            ctx.fillStyle = '#aaa';
-            ctx.font = '10px monospace';
-            ctx.fillText(labels[idx].toString(), 0, 0);
-            ctx.restore();
+        // X-axis labels
+        if (sorted) {
+            // In sorted mode: show every 5th label plus first and last
+            if (idx === 0 || idx === barCount - 1 || idx % 5 === 0) {
+                ctx.save();
+                ctx.translate(x + barWidth / 2, marginTop + plotHeight + 6);
+                ctx.rotate(Math.PI / 4);
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#aaa';
+                ctx.font = '10px monospace';
+                ctx.fillText(labels[idx].toString(), 0, 0);
+                ctx.restore();
+            }
+        } else {
+            const inGroup = idx % 9;
+            if (inGroup === 0 || inGroup === 4 || inGroup === 8) {
+                ctx.save();
+                ctx.translate(x + barWidth / 2, marginTop + plotHeight + 6);
+                ctx.rotate(Math.PI / 4);
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#aaa';
+                ctx.font = '10px monospace';
+                ctx.fillText(labels[idx].toString(), 0, 0);
+                ctx.restore();
+            }
         }
     }
 
@@ -419,15 +458,29 @@ function drawChart(freq, n) {
     ctx.fillStyle = '#aaa';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('q = Q1 + 10 * Q2', marginLeft + plotWidth / 2, chartHeight - 4);
+    const xLabel = sorted ? 'q (sortiert nach Haeufigkeit aufsteigend)' : 'q = Q1 + 10 * Q2';
+    ctx.fillText(xLabel, marginLeft + plotWidth / 2, chartHeight - 4);
 
     // Title
     ctx.fillStyle = '#e94560';
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Verteilung der q-Werte fuer Nicht-Primzahlen von 1 bis ' + n.toLocaleString('de-DE'), marginLeft + plotWidth / 2, 18);
+    const titleSuffix = sorted ? ' [sortiert]' : '';
+    ctx.fillText('Verteilung der q-Werte fuer Nicht-Primzahlen von 1 bis ' + n.toLocaleString('de-DE') + titleSuffix, marginLeft + plotWidth / 2, 18);
 
     currentData = { labels, values, maxVal, n };
+}
+
+function toggleSort() {
+    if (!lastFreq) return;
+    sortedMode = !sortedMode;
+    const sortBtn = document.getElementById('sortBtn');
+    if (sortedMode) {
+        sortBtn.innerHTML = '&#x25BC; Normal (nach q)';
+    } else {
+        sortBtn.innerHTML = '&#x25B2; Aufsteigend sortieren';
+    }
+    drawChart(lastFreq, lastN, sortedMode);
 }
 
 // --- Tooltip on hover ---
@@ -524,7 +577,15 @@ function run() {
         const { freq, compositeCount, validCount } = compute(n);
         const t1 = performance.now();
 
-        drawChart(freq, n);
+        // Store for sort toggle
+        lastFreq = freq;
+        lastN = n;
+        sortedMode = false;
+        const sortBtn = document.getElementById('sortBtn');
+        sortBtn.innerHTML = '&#x25B2; Aufsteigend sortieren';
+        sortBtn.disabled = false;
+
+        drawChart(freq, n, false);
         showStats(freq, compositeCount, validCount, n);
 
         document.getElementById('infoBar').innerHTML =
